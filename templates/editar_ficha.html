@@ -1,0 +1,895 @@
+{% extends "base.html" %}
+
+{% block title %}Editar {{ ficha.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">✏️ Editar {{ ficha.nome }}</h1>
+    <p class="page-subtitle">
+        Faça as alterações necessárias nos dados do personagem
+    </p>
+    
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            👁️ Visualizar Ficha
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none;">
+            🏠 Voltar ao Início
+        </a>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('atualizar_ficha', ficha_id=ficha.id) }}" style="max-width: 1000px; margin: 0 auto;">
+    
+    <!-- INFORMAÇÕES BÁSICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📋 Informações Básicas</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nome">Nome do Personagem *</label>
+                <input type="text" id="nome" name="nome" value="{{ ficha.nome }}" required placeholder="Nome do personagem">
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_corpo">Tipo de Corpo *</label>
+                <select id="tipo_corpo" name="tipo_corpo" required>
+                    <option value="">Selecione o tipo de corpo</option>
+                    <option value="Rápido" {% if ficha.tipo_corpo == 'Rápido' %}selected{% endif %}>⚡ Rápido - Foco em agilidade</option>
+                    <option value="Neutro" {% if ficha.tipo_corpo == 'Neutro' %}selected{% endif %}>⚖️ Neutro - Balanceado</option>
+                    <option value="Pesado" {% if ficha.tipo_corpo == 'Pesado' %}selected{% endif %}>🛡️ Pesado - Foco em resistência</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="ouro">Ouro</label>
+                <input type="number" id="ouro" name="ouro" value="{{ ficha.ouro }}" min="0">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="categoria">Categoria *</label>
+                <select id="categoria" name="categoria" required onchange="atualizarClasses()">
+                    <option value="">Selecione a categoria</option>
+                    <option value="Brutamontes" {% if ficha.categoria == 'Brutamontes' %}selected{% endif %}>🗿 Brutamontes - Força bruta e resistência</option>
+                    <option value="Combatentes" {% if ficha.categoria == 'Combatentes' %}selected{% endif %}>⚔️ Combatentes - Especialistas em combate</option>
+                    <option value="Suporte" {% if ficha.categoria == 'Suporte' %}selected{% endif %}>💚 Suporte - Cura e assistência</option>
+                    <option value="Diplomatas" {% if ficha.categoria == 'Diplomatas' %}selected{% endif %}>🎭 Diplomatas - Persuasão e carisma</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="classe">Classe *</label>
+                <select id="classe" name="classe" required>
+                    <option value="">Selecione primeiro a categoria</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="elemento">Elemento Mágico *</label>
+                <select id="elemento" name="elemento" required>
+                    <option value="">Selecione o elemento</option>
+                    <option value="Fogo" {% if ficha.elemento == 'Fogo' %}selected{% endif %}>🔥 Fogo - Poder destrutivo</option>
+                    <option value="Agua" {% if ficha.elemento == 'Agua' %}selected{% endif %}>💧 Água - Fluidez e adaptação</option>
+                    <option value="Terra" {% if ficha.elemento == 'Terra' %}selected{% endif %}>🌍 Terra - Estabilidade e força</option>
+                    <option value="Natureza" {% if ficha.elemento == 'Natureza' %}selected{% endif %}>🌿 Natureza - Vida e crescimento</option>
+                    <option value="Vento" {% if ficha.elemento == 'Vento' %}selected{% endif %}>💨 Vento - Velocidade e liberdade</option>
+                    <option value="Som" {% if ficha.elemento == 'Som' %}selected{% endif %}>🔊 Som - Vibração e harmonia</option>
+                    <option value="Sagrado" {% if ficha.elemento == 'Sagrado' %}selected{% endif %}>✨ Sagrado - Pureza e proteção</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="historia">História do Personagem</label>
+            <textarea id="historia" name="historia" rows="4" placeholder="Conte a história e motivações do seu personagem...">{{ ficha.historia or '' }}</textarea>
+        </div>
+    </div>
+
+    <!-- STATUS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📊 Status do Personagem</h3>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #dc3545;">
+                <h4 style="color: #dc3545; margin-bottom: 15px;">❤️ Vida</h4>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="vida_atual">Atual</label>
+                        <input type="number" id="vida_atual" name="vida_atual" value="{{ ficha.vida_atual }}" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="vida_maxima">Máxima</label>
+                        <input type="number" id="vida_maxima" name="vida_maxima" value="{{ ficha.vida_maxima }}" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #007bff;">
+                <h4 style="color: #007bff; margin-bottom: 15px;">🔮 Mana</h4>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="mana_atual">Atual</label>
+                        <input type="number" id="mana_atual" name="mana_atual" value="{{ ficha.mana_atual }}" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="mana_maxima">Máxima</label>
+                        <input type="number" id="mana_maxima" name="mana_maxima" value="{{ ficha.mana_maxima }}" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #ffc107;">
+                <h4 style="color: #e6a500; margin-bottom: 15px;">⚡ Vigor</h4>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="vigor_atual">Atual</label>
+                        <input type="number" id="vigor_atual" name="vigor_atual" value="{{ ficha.vigor_atual }}" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="vigor_maximo">Máximo</label>
+                        <input type="number" id="vigor_maximo" name="vigor_maximo" value="{{ ficha.vigor_maximo }}" min="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #6f42c1;">
+                <h4 style="color: #6f42c1; margin-bottom: 15px;">🧠 Sanidade</h4>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="sanidade_atual">Atual</label>
+                        <input type="number" id="sanidade_atual" name="sanidade_atual" value="{{ ficha.sanidade_atual }}" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="sanidade_maxima">Máxima</label>
+                        <input type="number" id="sanidade_maxima" name="sanidade_maxima" value="{{ ficha.sanidade_maxima }}" min="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-row" style="margin-top: 20px;">
+            <div class="form-group">
+                <label for="deslocamento">Deslocamento (metros)</label>
+                <input type="number" id="deslocamento" name="deslocamento" value="{{ ficha.deslocamento }}" min="0">
+            </div>
+            <div class="form-group">
+                <label for="resistencia">Resistência</label>
+                <input type="number" id="resistencia" name="resistencia" value="{{ ficha.resistencia }}" min="0">
+            </div>
+            <div class="form-group">
+                <label for="armadura_fisica">Armadura Física</label>
+                <input type="number" id="armadura_fisica" name="armadura_fisica" value="{{ ficha.armadura_fisica }}" min="0">
+            </div>
+            <div class="form-group">
+                <label for="armadura_magica">Armadura Mágica</label>
+                <input type="number" id="armadura_magica" name="armadura_magica" value="{{ ficha.armadura_magica }}" min="0">
+            </div>
+        </div>
+    </div>
+
+    <!-- ATRIBUTOS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>⚡ Atributos Base</h3>
+            <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+                Distribua pontos nos atributos principais do personagem (cada atributo adiciona +4 dados aos testes)
+            </p>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="forca">💪 Força</label>
+                <input type="number" id="forca" name="forca" value="{{ ficha.forca }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="destreza">🏃 Destreza</label>
+                <input type="number" id="destreza" name="destreza" value="{{ ficha.destreza }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="magia">🔮 Magia</label>
+                <input type="number" id="magia" name="magia" value="{{ ficha.magia }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="constituicao">🛡️ Constituição</label>
+                <input type="number" id="constituicao" name="constituicao" value="{{ ficha.constituicao }}" min="-10" max="20">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="agilidade">⚡ Agilidade</label>
+                <input type="number" id="agilidade" name="agilidade" value="{{ ficha.agilidade }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="sabedoria">🦉 Sabedoria</label>
+                <input type="number" id="sabedoria" name="sabedoria" value="{{ ficha.sabedoria }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="carisma">💎 Carisma</label>
+                <input type="number" id="carisma" name="carisma" value="{{ ficha.carisma }}" min="-10" max="20">
+            </div>
+            <div class="form-group">
+                <label for="fe">✨ Fé</label>
+                <input type="number" id="fe" name="fe" value="{{ ficha.fe }}" min="-10" max="20">
+            </div>
+        </div>
+    </div>
+
+    <!-- EQUIPAMENTOS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>⚔️ Equipamentos</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="armadura">🛡️ Armadura</label>
+                <input type="text" id="armadura" name="armadura" value="{{ ficha.armadura or '' }}" placeholder="Nome da armadura">
+            </div>
+            <div class="form-group">
+                <label for="arma">⚔️ Arma Principal</label>
+                <input type="text" id="arma" name="arma" value="{{ ficha.arma or '' }}" placeholder="Nome da arma">
+            </div>
+            <div class="form-group">
+                <label for="complemento">🔧 Equipamento Complementar</label>
+                <input type="text" id="complemento" name="complemento" value="{{ ficha.complemento or '' }}" placeholder="Equipamento adicional">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="amuleto1">📿 Amuleto 1</label>
+                <input type="text" id="amuleto1" name="amuleto1" value="{{ ficha.amuleto1 or '' }}" placeholder="Primeiro amuleto">
+            </div>
+            <div class="form-group">
+                <label for="amuleto2">📿 Amuleto 2</label>
+                <input type="text" id="amuleto2" name="amuleto2" value="{{ ficha.amuleto2 or '' }}" placeholder="Segundo amuleto">
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFICIÊNCIAS GERAIS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>🎯 Proficiências Gerais (0-5)</h3>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div class="form-group">
+                <label for="prof_sobrevivencia">🏕️ Sobrevivência</label>
+                <input type="number" id="prof_sobrevivencia" name="prof_sobrevivencia" value="{{ ficha.prof_sobrevivencia }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_botanica">🌱 Botânica</label>
+                <input type="number" id="prof_botanica" name="prof_botanica" value="{{ ficha.prof_botanica }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_culinaria">🍳 Culinária</label>
+                <input type="number" id="prof_culinaria" name="prof_culinaria" value="{{ ficha.prof_culinaria }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_religiao">⛪ Religião</label>
+                <input type="number" id="prof_religiao" name="prof_religiao" value="{{ ficha.prof_religiao }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_pescaria">🎣 Pescaria</label>
+                <input type="number" id="prof_pescaria" name="prof_pescaria" value="{{ ficha.prof_pescaria }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_ferraria">🔨 Ferraria</label>
+                <input type="number" id="prof_ferraria" name="prof_ferraria" value="{{ ficha.prof_ferraria }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_artesanato">🎨 Artesanato</label>
+                <input type="number" id="prof_artesanato" name="prof_artesanato" value="{{ ficha.prof_artesanato }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_mixologia">🍺 Mixologia</label>
+                <input type="number" id="prof_mixologia" name="prof_mixologia" value="{{ ficha.prof_mixologia }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_musica">🎵 Música</label>
+                <input type="number" id="prof_musica" name="prof_musica" value="{{ ficha.prof_musica }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_jogos_azar">🎲 Jogos de Azar</label>
+                <input type="number" id="prof_jogos_azar" name="prof_jogos_azar" value="{{ ficha.prof_jogos_azar }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_rataria">🐀 Rataria</label>
+                <input type="number" id="prof_rataria" name="prof_rataria" value="{{ ficha.prof_rataria }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_navegacao">⛵ Navegação</label>
+                <input type="number" id="prof_navegacao" name="prof_navegacao" value="{{ ficha.prof_navegacao }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_sacratismo">✨ Sacratismo</label>
+                <input type="number" id="prof_sacratismo" name="prof_sacratismo" value="{{ ficha.prof_sacratismo }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_demonologia">👹 Demonologia</label>
+                <input type="number" id="prof_demonologia" name="prof_demonologia" value="{{ ficha.prof_demonologia }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_guerra">⚔️ Guerra</label>
+                <input type="number" id="prof_guerra" name="prof_guerra" value="{{ ficha.prof_guerra }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_acrobacia">🤸 Acrobacia</label>
+                <input type="number" id="prof_acrobacia" name="prof_acrobacia" value="{{ ficha.prof_acrobacia }}" min="0" max="5">
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFICIÊNCIAS DE COMBATE -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>⚔️ Proficiências de Combate (0-5)</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="prof_combate_desarmado">👊 Combate Desarmado</label>
+                <input type="number" id="prof_combate_desarmado" name="prof_combate_desarmado" value="{{ ficha.prof_combate_desarmado }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_armas_leves">🗡️ Armas Leves</label>
+                <input type="number" id="prof_armas_leves" name="prof_armas_leves" value="{{ ficha.prof_armas_leves }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_armas_pesadas">⚔️ Armas Pesadas</label>
+                <input type="number" id="prof_armas_pesadas" name="prof_armas_pesadas" value="{{ ficha.prof_armas_pesadas }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_armas_longa_distancia">🏹 Armas Longa Distância</label>
+                <input type="number" id="prof_armas_longa_distancia" name="prof_armas_longa_distancia" value="{{ ficha.prof_armas_longa_distancia }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="prof_arremesso">🎯 Arremesso</label>
+                <input type="number" id="prof_arremesso" name="prof_arremesso" value="{{ ficha.prof_arremesso }}" min="0" max="5">
+            </div>
+        </div>
+    </div>
+
+    <!-- PERÍCIAS MÁGICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>🔮 Perícias Mágicas (0-5)</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="per_maguslogia">📚 Maguslogia</label>
+                <input type="number" id="per_maguslogia" name="per_maguslogia" value="{{ ficha.per_maguslogia }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="per_magia_elemental">🌊 Magia Elemental</label>
+                <input type="number" id="per_magia_elemental" name="per_magia_elemental" value="{{ ficha.per_magia_elemental }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="per_magia_obscura">🌑 Magia Obscura (Bloqueada)</label>
+                <input type="number" id="per_magia_obscura" name="per_magia_obscura" value="0" min="0" max="0" readonly style="background-color: #f5f5f5; opacity: 0.6;">
+            </div>
+            <div class="form-group">
+                <label for="per_magia_estimulo">💫 Magia Estímulo</label>
+                <input type="number" id="per_magia_estimulo" name="per_magia_estimulo" value="{{ ficha.per_magia_estimulo }}" min="0" max="5">
+            </div>
+            <div class="form-group">
+                <label for="per_magia_territorial">🗺️ Magia Territorial</label>
+                <input type="number" id="per_magia_territorial" name="per_magia_territorial" value="{{ ficha.per_magia_territorial }}" min="0" max="5">
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO -->
+    <div style="text-align: center; margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 12px;">
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary" style="font-size: 16px; padding: 16px 32px; border: none; cursor: pointer;">
+                💾 Salvar Alterações
+            </button>
+            <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="font-size: 16px; padding: 16px 32px; text-decoration: none;">
+                👁️ Visualizar Ficha
+            </a>
+            <a href="{{ url_for('index') }}" class="btn-primary" style="font-size: 16px; padding: 16px 32px; text-decoration: none;">
+                🏠 Voltar ao Início
+            </a>
+        </div>
+        <p style="margin-top: 16px; color: #6c757d; font-size: 14px;">
+            Confirme as alterações antes de salvar
+        </p>
+    </div>
+</form>
+
+<!-- Informações da Ficha -->
+<div class="card" style="margin-top: 30px; max-width: 1000px; margin-left: auto; margin-right: auto;">
+    <div class="card-header">
+        <h3>📊 Informações da Ficha</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ID DA FICHA</div>
+            <div style="font-size: 20px; font-weight: 700; color: #2c3e50;">#{{ ficha.id }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">CRIADA EM</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ ficha.criado_em.split('.')[0] if ficha.criado_em else 'N/A' }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ÚLTIMA ATUALIZAÇÃO</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ ficha.atualizado_em.split('.')[0] if ficha.atualizado_em else 'N/A' }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Mapeamento de classes por categoria
+    const classesPorCategoria = {
+        'Brutamontes': [
+            {value: 'Berserker', text: '🔥 Berserker - Fúria em combate'},
+            {value: 'Guardião', text: '🛡️ Guardião - Protetor dos aliados'},
+            {value: 'Sentinela', text: '👁️ Sentinela - Vigilante atento'}
+        ],
+        'Combatentes': [
+            {value: 'Soldado', text: '⚔️ Soldado - Disciplina militar'},
+            {value: 'Caçador', text: '🏹 Caçador - Especialista em rastreamento'},
+            {value: 'Feiticeiro', text: '🔮 Feiticeiro - Magia de combate'}
+        ],
+        'Suporte': [
+            {value: 'Médico', text: '🏥 Médico - Cura e tratamento'},
+            {value: 'Bruxo', text: '🧙 Bruxo - Magia de apoio'},
+            {value: 'Padre', text: '⛪ Padre - Benção divina'}
+        ],
+        'Diplomatas': [
+            {value: 'Bardo', text: '🎵 Bardo - Inspiração e música'},
+            {value: 'Bandido', text: '🗡️ Bandido - Astúcia e stealth'},
+            {value: 'Mercador', text: '💰 Mercador - Negociação e comércio'}
+        ]
+    };
+
+    // Bônus das classes
+    const bonusClasses = {
+        'Berserker': {
+            status: { vida_maxima: 25, vida_atual: 25, vigor_maximo: 10, vigor_atual: 10, sanidade_maxima: -40, sanidade_atual: -40 },
+            atributos: { forca: 8, constituicao: 6, sabedoria: -2 },
+            proficiencias: { prof_sobrevivencia: 2, prof_guerra: 2, prof_armas_leves: 1 }
+        },
+        'Guardião': {
+            status: { vida_maxima: 20, vida_atual: 20, vigor_maximo: 15, vigor_atual: 15, resistencia: 6 },
+            atributos: { constituicao: 8, sabedoria: 2, forca: 2 },
+            proficiencias: { prof_guerra: 2, prof_ferraria: 2, prof_armas_pesadas: 1 }
+        },
+        'Sentinela': {
+            status: { vida_maxima: 18, vida_atual: 18, mana_maxima: 8, mana_atual: 8, resistencia: 4 },
+            atributos: { magia: 5, constituicao: 3, sabedoria: 2 },
+            proficiencias: { prof_religiao: 2, prof_guerra: 2, per_magia_territorial: 1, per_magia_estimulo: 1 }
+        },
+        'Soldado': {
+            status: { vida_maxima: 15, vida_atual: 15, vigor_maximo: 10, vigor_atual: 10, resistencia: 2 },
+            atributos: { forca: 6, constituicao: 5, destreza: 2 },
+            proficiencias: { prof_guerra: 2, prof_sobrevivencia: 2, prof_armas_leves: 1, prof_armas_pesadas: 1 }
+        },
+        'Caçador': {
+            status: { vigor_maximo: 12, vigor_atual: 12, sanidade_maxima: 10, sanidade_atual: 10 },
+            atributos: { destreza: 8, agilidade: 6, sabedoria: 2 },
+            proficiencias: { prof_sobrevivencia: 2, prof_pescaria: 1, prof_rataria: 1, prof_armas_longa_distancia: 2, prof_arremesso: 1 }
+        },
+        'Feiticeiro': {
+            status: { mana_maxima: 20, mana_atual: 20, sanidade_maxima: -40, sanidade_atual: -40, resistencia: -4, vida_maxima: -5, vida_atual: -5 },
+            atributos: { magia: 8, sabedoria: 4, constituicao: -4 },
+            proficiencias: { per_magia_elemental: 3, per_magia_territorial: 1, prof_mixologia: 2 }
+        },
+        'Médico': {
+            status: { sanidade_maxima: 30, sanidade_atual: 30, vigor_maximo: 8, vigor_atual: 8, mana_maxima: 6, mana_atual: 6 },
+            atributos: { sabedoria: 6, agilidade: 4, fe: 2 },
+            proficiencias: { prof_botanica: 2, prof_culinaria: 2, prof_religiao: 1, prof_acrobacia: 1 }
+        },
+        'Bruxo': {
+            status: { mana_maxima: 15, mana_atual: 15, sanidade_maxima: 10, sanidade_atual: 10, resistencia: 3 },
+            atributos: { magia: 6, agilidade: 4, sabedoria: 3 },
+            proficiencias: { prof_botanica: 2, prof_mixologia: 1, per_magia_territorial: 3 }
+        },
+        'Padre': {
+            status: { sanidade_maxima: 50, sanidade_atual: 50, mana_maxima: 8, mana_atual: 8, resistencia: -3 },
+            atributos: { fe: 8, sabedoria: 5, magia: 2 },
+            proficiencias: { prof_religiao: 4, prof_sacratismo: 3, prof_demonologia: 3 }
+        },
+        'Bardo': {
+            status: { vigor_maximo: 12, vigor_atual: 12, sanidade_maxima: 20, sanidade_atual: 20 },
+            atributos: { carisma: 8, destreza: 3, agilidade: 2 },
+            proficiencias: { prof_musica: 2, prof_culinaria: 1, prof_jogos_azar: 1, prof_arremesso: 2 }
+        },
+        'Bandido': {
+            status: { vigor_maximo: 8, vigor_atual: 8, sanidade_maxima: 5, sanidade_atual: 5 },
+            atributos: { agilidade: 8, carisma: 4, destreza: 3 },
+            proficiencias: { prof_rataria: 2, prof_jogos_azar: 1, prof_navegacao: 1, prof_armas_leves: 1, prof_arremesso: 1 }
+        },
+        'Mercador': {
+            status: { vigor_maximo: 6, vigor_atual: 6, sanidade_maxima: 10, sanidade_atual: 10 },
+            atributos: { carisma: 6, sabedoria: 3, destreza: 2 },
+            proficiencias: { prof_jogos_azar: 2, prof_navegacao: 1, prof_mixologia: 1, prof_musica: 1, prof_armas_longa_distancia: 1 }
+        }
+    };
+
+    // Bônus dos tipos de corpo
+    const bonusTipoCorpo = {
+        'Rápido': {
+            status: { vida_maxima: 10, vida_atual: 10, vigor_maximo: 6, vigor_atual: 6, resistencia: 7 },
+            atributos: { agilidade: 2 }
+        },
+        'Neutro': {
+            status: { vida_maxima: 15, vida_atual: 15, vigor_maximo: 4, vigor_atual: 4, resistencia: 5 },
+            atributos: { constituicao: 1, agilidade: 1 }
+        },
+        'Pesado': {
+            status: { vida_maxima: 25, vida_atual: 25, resistencia: 3 },
+            atributos: { constituicao: 3 }
+        }
+    };
+
+    // Valores base padrão
+    const valoresBase = {
+        vida_atual: 10,
+        vida_maxima: 10,
+        mana_atual: 10,
+        mana_maxima: 10,
+        vigor_atual: 10,
+        vigor_maximo: 10,
+        sanidade_atual: 100,
+        sanidade_maxima: 100,
+        resistencia: 5,
+        deslocamento: 0,
+        armadura_fisica: 0,
+        armadura_magica: 0,
+        ouro: parseInt(document.getElementById('ouro')?.value) || 0,
+        forca: 0,
+        destreza: 0,
+        magia: 0,
+        constituicao: 0,
+        agilidade: 0,
+        sabedoria: 0,
+        carisma: 0,
+        fe: 0
+    };
+
+    function atualizarClasses() {
+        const categoria = document.getElementById('categoria').value;
+        const classeSelect = document.getElementById('classe');
+        const classeAtual = '{{ ficha.classe }}';
+        
+        // Limpar opções
+        classeSelect.innerHTML = '<option value="">Selecione a classe</option>';
+        
+        if (categoria && classesPorCategoria[categoria]) {
+            classesPorCategoria[categoria].forEach(classe => {
+                const option = document.createElement('option');
+                option.value = classe.value;
+                option.textContent = classe.text;
+                if (classe.value === classeAtual) {
+                    option.selected = true;
+                }
+                classeSelect.appendChild(option);
+            });
+        }
+    }
+
+    // Função para mostrar aviso sobre recalcular bônus
+    function mostrarAvisoBonus() {
+        return confirm('⚠️ ATENÇÃO: Ao alterar a classe ou tipo de corpo, os valores serão recalculados com os bônus padrão.\n\nIsso irá substituir os valores atuais pelos valores base + novos bônus da classe/tipo.\n\nDeseja continuar?');
+    }
+
+    function aplicarBonusCompleto() {
+        // Resetar para valores base (mantendo ouro atual)
+        const ouroAtual = parseInt(document.getElementById('ouro')?.value) || 0;
+        valoresBase.ouro = ouroAtual;
+        
+        for (const [campo, valor] of Object.entries(valoresBase)) {
+            const elemento = document.getElementById(campo);
+            if (elemento) {
+                elemento.value = valor;
+            }
+        }
+        
+        // Resetar proficiências
+        const proficiencias = [
+            'prof_sobrevivencia', 'prof_botanica', 'prof_culinaria', 'prof_religiao', 'prof_pescaria',
+            'prof_ferraria', 'prof_artesanato', 'prof_mixologia', 'prof_musica', 'prof_jogos_azar',
+            'prof_rataria', 'prof_navegacao', 'prof_sacratismo', 'prof_demonologia', 'prof_guerra',
+            'prof_acrobacia', 'prof_combate_desarmado', 'prof_armas_leves', 'prof_armas_pesadas',
+            'prof_armas_longa_distancia', 'prof_arremesso', 'per_maguslogia', 'per_magia_elemental',
+            'per_magia_estimulo', 'per_magia_territorial'
+        ];
+        
+        proficiencias.forEach(prof => {
+            const elemento = document.getElementById(prof);
+            if (elemento) {
+                elemento.value = 0;
+            }
+        });
+
+        // Aplicar bônus da classe
+        const classe = document.getElementById('classe').value;
+        if (classe && bonusClasses[classe]) {
+            const bonus = bonusClasses[classe];
+            
+            // Status
+            if (bonus.status) {
+                for (const [campo, valor] of Object.entries(bonus.status)) {
+                    const elemento = document.getElementById(campo);
+                    if (elemento) {
+                        const valorBase = valoresBase[campo] || 0;
+                        const novoValor = Math.max(0, valorBase + valor);
+                        elemento.value = novoValor;
+                    }
+                }
+            }
+            
+            // Atributos
+            if (bonus.atributos) {
+                for (const [atributo, valor] of Object.entries(bonus.atributos)) {
+                    const elemento = document.getElementById(atributo);
+                    if (elemento) {
+                        const valorBase = valoresBase[atributo] || 0;
+                        const novoValor = valorBase + valor;
+                        elemento.value = novoValor;
+                    }
+                }
+            }
+            
+            // Proficiências
+            if (bonus.proficiencias) {
+                for (const [prof, valor] of Object.entries(bonus.proficiencias)) {
+                    const elemento = document.getElementById(prof);
+                    if (elemento) {
+                        const valorAtual = parseInt(elemento.value) || 0;
+                        const novoValor = Math.min(5, valorAtual + valor);
+                        elemento.value = novoValor;
+                    }
+                }
+            }
+        }
+
+        // Aplicar bônus do tipo de corpo
+        const tipoCorpo = document.getElementById('tipo_corpo').value;
+        if (tipoCorpo && bonusTipoCorpo[tipoCorpo]) {
+            const bonus = bonusTipoCorpo[tipoCorpo];
+            
+            // Status
+            if (bonus.status) {
+                for (const [campo, valor] of Object.entries(bonus.status)) {
+                    const elemento = document.getElementById(campo);
+                    if (elemento) {
+                        const valorAtual = parseInt(elemento.value) || 0;
+                        const novoValor = Math.max(0, valorAtual + valor);
+                        elemento.value = novoValor;
+                    }
+                }
+            }
+            
+            // Atributos
+            if (bonus.atributos) {
+                for (const [atributo, valor] of Object.entries(bonus.atributos)) {
+                    const elemento = document.getElementById(atributo);
+                    if (elemento) {
+                        const valorAtual = parseInt(elemento.value) || 0;
+                        const novoValor = valorAtual + valor;
+                        elemento.value = novoValor;
+                    }
+                }
+            }
+        }
+
+        // Garantir que magia obscura fique em 0
+        const magiaObscura = document.getElementById('per_magia_obscura');
+        if (magiaObscura) {
+            magiaObscura.value = 0;
+        }
+
+        // Mostrar notificação
+        mostrarNotificacao('✨ Bônus aplicados com sucesso!');
+    }
+
+    function mostrarNotificacao(texto) {
+        const notificacao = document.createElement('div');
+        notificacao.textContent = texto;
+        notificacao.style.cssText = `
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white; padding: 12px 20px; border-radius: 8px;
+            font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(100%); transition: transform 0.3s ease;
+        `;
+        
+        document.body.appendChild(notificacao);
+        
+        setTimeout(() => {
+            notificacao.style.transform = 'translateX(0)';
+        }, 100);
+        
+        setTimeout(() => {
+            notificacao.style.transform = 'translateX(100%)';
+            setTimeout(() => notificacao.remove(), 300);
+        }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar as classes baseadas na categoria atual
+        atualizarClasses();
+        
+        // Event listeners para recalcular bônus quando necessário
+        document.getElementById('classe').addEventListener('change', function() {
+            if (this.value && mostrarAvisoBonus()) {
+                aplicarBonusCompleto();
+            }
+        });
+        
+        document.getElementById('tipo_corpo').addEventListener('change', function() {
+            if (this.value && mostrarAvisoBonus()) {
+                aplicarBonusCompleto();
+            }
+        });
+        
+        // Garantir que magia obscura fique em 0
+        document.getElementById('per_magia_obscura').value = 0;
+        
+        // Sincronizar valores atuais com máximos
+        ['vida', 'mana', 'vigor', 'sanidade'].forEach(status => {
+            const maxInput = document.getElementById(status + '_maxima');
+            const currentInput = document.getElementById(status + '_atual');
+            
+            if (maxInput && currentInput) {
+                // Configurar validação inicial
+                currentInput.setAttribute('max', maxInput.value);
+                
+                maxInput.addEventListener('input', function() {
+                    const maxValue = parseInt(this.value) || 0;
+                    currentInput.setAttribute('max', maxValue);
+                    if (parseInt(currentInput.value) > maxValue) {
+                        currentInput.value = maxValue;
+                    }
+                });
+                
+                currentInput.addEventListener('input', function() {
+                    const maxValue = parseInt(maxInput.value) || 0;
+                    const currentValue = parseInt(this.value) || 0;
+                    if (currentValue > maxValue) {
+                        this.value = maxValue;
+                    }
+                });
+            }
+        });
+        
+        // Validação do formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            // Validar campos obrigatórios
+            const campos = [
+                { id: 'nome', nome: 'Nome do personagem' },
+                { id: 'categoria', nome: 'Categoria' },
+                { id: 'classe', nome: 'Classe' },
+                { id: 'elemento', nome: 'Elemento' },
+                { id: 'tipo_corpo', nome: 'Tipo de corpo' }
+            ];
+            
+            for (let campo of campos) {
+                const elemento = document.getElementById(campo.id);
+                if (elemento) {
+                    const valor = elemento.value.trim();
+                    if (!valor) {
+                        e.preventDefault();
+                        alert(`Por favor, preencha o campo: ${campo.nome}`);
+                        elemento.focus();
+                        return;
+                    }
+                }
+            }
+            
+            // Validar nome mínimo
+            const nome = document.getElementById('nome').value.trim();
+            if (nome.length < 2) {
+                e.preventDefault();
+                alert('O nome deve ter pelo menos 2 caracteres!');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            // Validar status
+            const statusChecks = [
+                { atual: 'vida_atual', maximo: 'vida_maxima', nome: 'Vida' },
+                { atual: 'mana_atual', maximo: 'mana_maxima', nome: 'Mana' },
+                { atual: 'vigor_atual', maximo: 'vigor_maximo', nome: 'Vigor' },
+                { atual: 'sanidade_atual', maximo: 'sanidade_maxima', nome: 'Sanidade' }
+            ];
+            
+            for (let status of statusChecks) {
+                const atualElement = document.getElementById(status.atual);
+                const maximoElement = document.getElementById(status.maximo);
+                
+                if (atualElement && maximoElement) {
+                    const atual = parseInt(atualElement.value) || 0;
+                    const maximo = parseInt(maximoElement.value) || 0;
+                    
+                    if (atual > maximo) {
+                        e.preventDefault();
+                        alert(`${status.nome} atual (${atual}) não pode ser maior que ${status.nome} máxima (${maximo})!`);
+                        atualElement.focus();
+                        return;
+                    }
+                }
+            }
+            
+            // Confirmar alterações
+            if (!confirm('Tem certeza que deseja salvar as alterações na ficha?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Efeitos visuais nos inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                if (!this.readOnly) {
+                    this.style.borderColor = '#667eea';
+                    this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '#e9ecef';
+                this.style.boxShadow = 'none';
+            });
+        });
+        
+        // Indicador de mudanças não salvas
+        let hasChanges = false;
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                hasChanges = true;
+            });
+        });
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = 'Você tem alterações não salvas. Tem certeza que deseja sair?';
+            }
+        });
+        
+        // Remover aviso ao submeter
+        form.addEventListener('submit', function() {
+            hasChanges = false;
+        });
+        
+        // Adicionar contador de pontos de atributos
+        const atributos = ['forca', 'destreza', 'magia', 'constituicao', 'agilidade', 'sabedoria', 'carisma', 'fe'];
+        function atualizarContadorAtributos() {
+            let total = 0;
+            atributos.forEach(attr => {
+                const input = document.getElementById(attr);
+                if (input) {
+                    total += parseInt(input.value) || 0;
+                }
+            });
+        }
+        
+        atributos.forEach(attr => {
+            const input = document.getElementById(attr);
+            if (input) {
+                input.addEventListener('input', atualizarContadorAtributos);
+            }
+        });
+        
+        // Inicializar contador
+        atualizarContadorAtributos();
+    });
+</script>
+{% endblock %}

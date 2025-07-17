@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Habilidades de {{ ficha.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚔️ Habilidades de {{ ficha.nome }}</h1>
+    <p class="page-subtitle">
+        Gerencie todas as habilidades e magias do seu personagem
+    </p>
+    
+    <div style="margin-top: 25px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('criar_habilidade', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            ➕ Nova Habilidade
+        </a>
+        <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            👁️ Ver Ficha
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none;">
+            🏠 Voltar ao Início
+        </a>
+    </div>
+</div>
+
+{% if habilidades %}
+    <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="color: #2c3e50; margin: 0;">📖 Grimório de Habilidades ({{ habilidades|length }})</h2>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <span style="color: #6c757d; font-size: 14px;">{{ habilidades|length }} habilidade{% if habilidades|length != 1 %}s{% endif %}</span>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e9ecef;">
+        <h4 style="margin-bottom: 15px; color: #495057;">🔍 Filtros</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <select id="filtro-nivel" onchange="filtrarHabilidades()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;">
+                <option value="">Todos os níveis</option>
+                <option value="1">Nível 1</option>
+                <option value="2">Nível 2</option>
+                <option value="3">Nível 3</option>
+                <option value="4">Nível 4</option>
+            </select>
+            
+            <select id="filtro-tipo" onchange="filtrarHabilidades()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;">
+                <option value="">Físico e Mágico</option>
+                <option value="FISICO">Físico</option>
+                <option value="MAGICO">Mágico</option>
+            </select>
+            
+            <select id="filtro-ativacao" onchange="filtrarHabilidades()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;">
+                <option value="">Ativa e Passiva</option>
+                <option value="ATIVA">Ativa</option>
+                <option value="PASSIVA">Passiva</option>
+            </select>
+            
+            <select id="filtro-categoria" onchange="filtrarHabilidades()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;">
+                <option value="">Todas as categorias</option>
+                <option value="Ataque">Ataque</option>
+                <option value="Defesa">Defesa</option>
+                <option value="Suporte">Suporte</option>
+                <option value="Terreno">Terreno</option>
+            </select>
+            
+            <input type="text" id="busca-nome" placeholder="Buscar por nome..." onkeyup="filtrarHabilidades()" style="padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;">
+        </div>
+    </div>
+    
+    <div id="lista-habilidades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 24px;">
+        {% for habilidade in habilidades %}
+            <div class="card habilidade-item" 
+                 data-nivel="{{ habilidade.nivel }}" 
+                 data-tipo="{{ habilidade.tipo_fisico_magico }}" 
+                 data-ativacao="{{ habilidade.tipo_ativacao }}" 
+                 data-categoria="{{ habilidade.tipo_habilidade }}"
+                 data-nome="{{ habilidade.nome.lower() }}"
+                 style="position: relative; transition: all 0.3s ease;">
+                
+                <!-- Badge de nível -->
+                <div style="position: absolute; top: 16px; right: 16px; background: 
+                    {% if habilidade.nivel == 1 %}#28a745{% elif habilidade.nivel == 2 %}#ffc107{% elif habilidade.nivel == 3 %}#fd7e14{% else %}#dc3545{% endif %}; 
+                    color: white; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">
+                    Nível {{ habilidade.nivel }}
+                </div>
+                
+                <!-- Tipo de habilidade/magia -->
+                {% if habilidade.eh_magia %}
+                    <div style="position: absolute; top: 16px; left: 16px; background: #6f42c1; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                        ✨ MAGIA
+                    </div>
+                {% else %}
+                    <div style="position: absolute; top: 16px; left: 16px; background: #495057; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                        ⚔️ HABILIDADE
+                    </div>
+                {% endif %}
+                
+                <!-- Conteúdo principal -->
+                <div style="margin-top: 45px;">
+                    <h3 style="font-size: 1.3rem; font-weight: 700; color: #2c3e50; margin-bottom: 12px;">
+                        {{ habilidade.nome }}
+                    </h3>
+                    
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            {{ habilidade.tipo_fisico_magico }}
+                        </span>
+                        <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            {{ habilidade.tipo_ativacao }}
+                        </span>
+                        <span style="background: #e8f5e8; color: #388e3c; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            {{ habilidade.tipo_habilidade }}
+                        </span>
+                        {% if habilidade.eh_magia and habilidade.elemento_magico %}
+                            <span style="background: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                                {{ habilidade.elemento_magico }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Proficiência -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">PROFICIÊNCIA RESPONSÁVEL</div>
+                        <div style="font-weight: 600; color: #495057;">{{ habilidade.proficiencia }}</div>
+                    </div>
+                    
+                    <!-- Efeito -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">EFEITO</div>
+                        <div style="color: #495057; font-size: 14px; line-height: 1.4;">{{ habilidade.efeito }}</div>
+                    </div>
+                    
+                    <!-- Descrição -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">DESCRIÇÃO</div>
+                        <div style="color: #6c757d; font-size: 13px; line-height: 1.5;">{{ habilidade.descricao }}</div>
+                    </div>
+                    
+                    <!-- Informações de combate -->
+                    {% if habilidade.custo or habilidade.dt_atributo or habilidade.alcance %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-bottom: 15px; font-size: 12px;">
+                            {% if habilidade.custo %}
+                                <div style="background: #fff3cd; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #856404; font-weight: 600;">CUSTO</div>
+                                    <div style="color: #6c5700;">{{ habilidade.custo }}</div>
+                                </div>
+                            {% endif %}
+                            {% if habilidade.dt_atributo %}
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #0c5460; font-weight: 600;">DT</div>
+                                    <div style="color: #0a4a53;">{{ habilidade.dt_atributo }}</div>
+                                </div>
+                            {% endif %}
+                            {% if habilidade.alcance %}
+                                <div style="background: #d4edda; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #155724; font-weight: 600;">ALCANCE</div>
+                                    <div style="color: #0f4419;">{{ habilidade.alcance }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Informações específicas de magia -->
+                    {% if habilidade.eh_magia and habilidade.conjuracao %}
+                        <div style="background: linear-gradient(135deg, #f3e5f5, #e1bee7); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
+                            <div style="font-size: 12px; color: #4a148c; margin-bottom: 4px; font-weight: 600;">✨ CONJURAÇÃO</div>
+                            <div style="color: #6a1b9a; font-size: 13px; line-height: 1.4;">{{ habilidade.conjuracao }}</div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Ações -->
+                    <div style="display: flex; gap: 8px; margin-top: 20px;">
+                        <a href="{{ url_for('editar_habilidade', habilidade_id=habilidade.id) }}" 
+                           class="btn-primary" 
+                           style="flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: 6px; font-size: 13px;">
+                            ✏️ Editar
+                        </a>
+                        <form method="POST" action="{{ url_for('deletar_habilidade', habilidade_id=habilidade.id) }}" 
+                              onsubmit="return confirm('Tem certeza que deseja deletar a habilidade {{ habilidade.nome }}?')" 
+                              style="flex: 1;">
+                            <button type="submit" 
+                                    style="width: 100%; background: #dc3545; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 13px; cursor: pointer;">
+                                🗑️ Deletar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Timestamp -->
+                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e9ecef; font-size: 11px; color: #adb5bd; text-align: center;">
+                    Criado: {{ habilidade.criado_em.split('.')[0] if habilidade.criado_em else 'N/A' }}
+                    {% if habilidade.atualizado_em != habilidade.criado_em %}
+                        • Editado: {{ habilidade.atualizado_em.split('.')[0] if habilidade.atualizado_em else 'N/A' }}
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Estatísticas -->
+    <div style="margin-top: 40px; background: white; padding: 24px; border-radius: 12px; border: 1px solid #e9ecef;">
+        <h4 style="margin-bottom: 20px; color: #2c3e50; font-size: 1.2rem;">📊 Estatísticas do Grimório</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            
+            <!-- Por nível -->
+            <div>
+                <strong style="color: #495057; display: block; margin-bottom: 8px;">📈 Por Nível</strong>
+                {% set niveis = {} %}
+                {% for habilidade in habilidades %}
+                    {% if niveis.update({habilidade.nivel: niveis.get(habilidade.nivel, 0) + 1}) %}{% endif %}
+                {% endfor %}
+                {% for nivel in [1, 2, 3, 4] %}
+                    <div style="font-size: 14px; color: #6c757d; margin-bottom: 4px;">
+                        Nível {{ nivel }}: <span style="font-weight: 600;">{{ niveis.get(nivel, 0) }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Por tipo -->
+            <div>
+                <strong style="color: #495057; display: block; margin-bottom: 8px;">⚔️ Por Tipo</strong>
+                {% set tipos = {} %}
+                {% for habilidade in habilidades %}
+                    {% if tipos.update({habilidade.tipo_fisico_magico: tipos.get(habilidade.tipo_fisico_magico, 0) + 1}) %}{% endif %}
+                {% endfor %}
+                {% for tipo, count in tipos.items() %}
+                    <div style="font-size: 14px; color: #6c757d; margin-bottom: 4px;">
+                        {{ tipo }}: <span style="font-weight: 600;">{{ count }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Por categoria -->
+            <div>
+                <strong style="color: #495057; display: block; margin-bottom: 8px;">🎯 Por Categoria</strong>
+                {% set categorias = {} %}
+                {% for habilidade in habilidades %}
+                    {% if categorias.update({habilidade.tipo_habilidade: categorias.get(habilidade.tipo_habilidade, 0) + 1}) %}{% endif %}
+                {% endfor %}
+                {% for categoria, count in categorias.items() %}
+                    <div style="font-size: 14px; color: #6c757d; margin-bottom: 4px;">
+                        {{ categoria }}: <span style="font-weight: 600;">{{ count }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Magias vs Habilidades -->
+            <div>
+                <strong style="color: #495057; display: block; margin-bottom: 8px;">✨ Magias vs Habilidades</strong>
+                {% set magias = habilidades | selectattr("eh_magia") | list | length %}
+                {% set habilidades_fisicas = habilidades | length - magias %}
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 4px;">
+                    Magias: <span style="font-weight: 600;">{{ magias }}</span>
+                </div>
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 4px;">
+                    Habilidades: <span style="font-weight: 600;">{{ habilidades_fisicas }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <!-- Estado vazio -->
+    <div class="empty-state">
+        <div class="empty-state-icon">⚔️</div>
+        <h3>Nenhuma habilidade encontrada</h3>
+        <p>{{ ficha.nome }} ainda não possui habilidades. Comece criando a primeira habilidade!</p>
+        <a href="{{ url_for('criar_habilidade', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none; font-size: 16px;">
+            ✨ Criar Primeira Habilidade
+        </a>
+    </div>
+{% endif %}
+
+<!-- Informações do sistema -->
+<div style="margin-top: 40px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 24px; border-radius: 12px; border: 1px solid #dee2e6;">
+    <h4 style="margin-bottom: 16px; color: #495057; font-size: 1.1rem;">💡 Sistema de Habilidades</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; font-size: 14px; color: #6c757d; line-height: 1.6;">
+        <div>
+            <strong style="color: #495057;">Níveis de Habilidade:</strong><br>
+            1-4, onde 4 é o nível máximo de poder
+        </div>
+        <div>
+            <strong style="color: #495057;">Tipos:</strong><br>
+            Físico (baseado em atributos) e Mágico (usa mana)
+        </div>
+        <div>
+            <strong style="color: #495057;">Ativação:</strong><br>
+            Ativa (requer ação) e Passiva (sempre ativa)
+        </div>
+        <div>
+            <strong style="color: #495057;">Categorias:</strong><br>
+            Ataque, Defesa, Suporte e Terreno
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filtrarHabilidades() {
+        const nivel = document.getElementById('filtro-nivel').value;
+        const tipo = document.getElementById('filtro-tipo').value;
+        const ativacao = document.getElementById('filtro-ativacao').value;
+        const categoria = document.getElementById('filtro-categoria').value;
+        const busca = document.getElementById('busca-nome').value.toLowerCase();
+        
+        const habilidades = document.querySelectorAll('.habilidade-item');
+        let visiveisCount = 0;
+        
+        habilidades.forEach(habilidade => {
+            const habilidadeNivel = habilidade.getAttribute('data-nivel');
+            const habilidadeTipo = habilidade.getAttribute('data-tipo');
+            const habilidadeAtivacao = habilidade.getAttribute('data-ativacao');
+            const habilidadeCategoria = habilidade.getAttribute('data-categoria');
+            const habilidadeNome = habilidade.getAttribute('data-nome');
+            
+            let mostrar = true;
+            
+            if (nivel && habilidadeNivel !== nivel) mostrar = false;
+            if (tipo && habilidadeTipo !== tipo) mostrar = false;
+            if (ativacao && habilidadeAtivacao !== ativacao) mostrar = false;
+            if (categoria && habilidadeCategoria !== categoria) mostrar = false;
+            if (busca && !habilidadeNome.includes(busca)) mostrar = false;
+            
+            if (mostrar) {
+                habilidade.style.display = 'block';
+                habilidade.style.opacity = '1';
+                habilidade.style.transform = 'scale(1)';
+                visiveisCount++;
+            } else {
+                habilidade.style.display = 'none';
+                habilidade.style.opacity = '0';
+                habilidade.style.transform = 'scale(0.95)';
+            }
+        });
+        
+        // Mostrar mensagem se nenhuma habilidade for encontrada
+        let mensagem = document.getElementById('nenhuma-habilidade');
+        if (visiveisCount === 0) {
+            if (!mensagem) {
+                mensagem = document.createElement('div');
+                mensagem.id = 'nenhuma-habilidade';
+                mensagem.style.cssText = `
+                    text-align: center; padding: 40px; background: #f8f9fa; 
+                    border-radius: 12px; border: 2px dashed #dee2e6; 
+                    color: #6c757d; font-size: 16px;
+                `;
+                mensagem.innerHTML = '🔍 Nenhuma habilidade encontrada com os filtros selecionados.';
+                document.getElementById('lista-habilidades').appendChild(mensagem);
+            }
+            mensagem.style.display = 'block';
+        } else if (mensagem) {
+            mensagem.style.display = 'none';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Adicionar efeitos hover nos cards
+        const cards = document.querySelectorAll('.habilidade-item');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-4px)';
+                this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.08)';
+            });
+        });
+        
+        // Adicionar efeitos nos botões
+        const botoes = document.querySelectorAll('button, .btn-primary');
+        botoes.forEach(botao => {
+            botao.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-1px)';
+            });
+            
+            botao.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+        
+        // Animação de entrada dos cards
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
+{% endblock %}

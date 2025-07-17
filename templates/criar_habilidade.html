@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Habilidade para {{ ficha.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">✨ Nova Habilidade para {{ ficha.nome }}</h1>
+    <p class="page-subtitle">
+        Crie uma nova habilidade ou magia para seu personagem
+    </p>
+    
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            ⚔️ Ver Habilidades
+        </a>
+        <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            👁️ Ver Ficha
+        </a>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('salvar_habilidade', ficha_id=ficha.id) }}" style="max-width: 1000px; margin: 0 auto;">
+    
+    <!-- INFORMAÇÕES BÁSICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📋 Estrutura Básica</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nome">Nome da Habilidade *</label>
+                <input type="text" id="nome" name="nome" required placeholder="Ex: Golpe Devastador, Bola de Fogo...">
+            </div>
+            
+            <div class="form-group">
+                <label for="nivel">Nível (1-4) *</label>
+                <select id="nivel" name="nivel" required>
+                    <option value="">Selecione o nível</option>
+                    <option value="1">🟢 Nível 1 - Iniciante</option>
+                    <option value="2">🟡 Nível 2 - Intermediário</option>
+                    <option value="3">🟠 Nível 3 - Avançado</option>
+                    <option value="4">🔴 Nível 4 - Mestre</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tipo_fisico_magico">Tipo *</label>
+                <select id="tipo_fisico_magico" name="tipo_fisico_magico" required>
+                    <option value="">Selecione o tipo</option>
+                    <option value="FISICO">⚔️ Físico - Baseado em atributos físicos</option>
+                    <option value="MAGICO">🔮 Mágico - Usa mana e magia</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_ativacao">Ativação *</label>
+                <select id="tipo_ativacao" name="tipo_ativacao" required>
+                    <option value="">Selecione a ativação</option>
+                    <option value="ATIVA">⚡ Ativa - Requer ação para usar</option>
+                    <option value="PASSIVA">🔄 Passiva - Sempre ativa</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_habilidade">Categoria *</label>
+                <select id="tipo_habilidade" name="tipo_habilidade" required>
+                    <option value="">Selecione a categoria</option>
+                    <option value="Ataque">⚔️ Ataque - Causa dano</option>
+                    <option value="Defesa">🛡️ Defesa - Protege ou reduz dano</option>
+                    <option value="Suporte">💚 Suporte - Cura ou auxilia</option>
+                    <option value="Terreno">🌍 Terreno - Modifica ambiente</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- MECÂNICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>⚙️ Mecânicas</h3>
+        </div>
+        
+        <div class="form-group">
+            <label for="proficiencia">Proficiência Responsável *</label>
+            <select id="proficiencia" name="proficiencia" required>
+                <option value="">Selecione a proficiência</option>
+                
+                <optgroup label="🎯 Proficiências Gerais">
+                    <option value="Sobrevivência">🏕️ Sobrevivência</option>
+                    <option value="Botânica">🌱 Botânica</option>
+                    <option value="Culinária">🍳 Culinária</option>
+                    <option value="Religião">⛪ Religião</option>
+                    <option value="Pescaria">🎣 Pescaria</option>
+                    <option value="Ferraria">🔨 Ferraria</option>
+                    <option value="Artesanato">🎨 Artesanato</option>
+                    <option value="Mixologia">🍺 Mixologia</option>
+                    <option value="Música">🎵 Música</option>
+                    <option value="Jogos de Azar">🎲 Jogos de Azar</option>
+                    <option value="Rataria">🐀 Rataria</option>
+                    <option value="Navegação">⛵ Navegação</option>
+                    <option value="Sacratismo">✨ Sacratismo</option>
+                    <option value="Demonologia">👹 Demonologia</option>
+                    <option value="Guerra">⚔️ Guerra</option>
+                    <option value="Acrobacia">🤸 Acrobacia</option>
+                </optgroup>
+                
+                <optgroup label="⚔️ Proficiências de Combate">
+                    <option value="Combate Desarmado">👊 Combate Desarmado</option>
+                    <option value="Armas Leves">🗡️ Armas Leves</option>
+                    <option value="Armas Pesadas">⚔️ Armas Pesadas</option>
+                    <option value="Armas Longa Distância">🏹 Armas Longa Distância</option>
+                    <option value="Arremesso">🎯 Arremesso</option>
+                </optgroup>
+                
+                <optgroup label="🔮 Perícias Mágicas">
+                    <option value="Maguslogia">📚 Maguslogia</option>
+                    <option value="Magia Elemental">🌊 Magia Elemental</option>
+                    <option value="Magia Estímulo">💫 Magia Estímulo</option>
+                    <option value="Magia Territorial">🗺️ Magia Territorial</option>
+                </optgroup>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="efeito">Efeito *</label>
+            <textarea id="efeito" name="efeito" rows="3" required placeholder="Descreva o efeito mecânico da habilidade (dano, cura, bônus, etc.)"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="descricao">Descrição *</label>
+            <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva como a habilidade/magia é executada, sua aparência visual, sensações, etc."></textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="custo">Custo</label>
+                <input type="text" id="custo" name="custo" placeholder="Ex: 5 Mana, 2 Vigor, 1 Ação...">
+            </div>
+            
+            <div class="form-group">
+                <label for="dt_atributo">DT + Atributo</label>
+                <input type="text" id="dt_atributo" name="dt_atributo" placeholder="Ex: DT15 + Força, DT12 + Magia...">
+            </div>
+            
+            <div class="form-group">
+                <label for="alcance">Alcance</label>
+                <input type="text" id="alcance" name="alcance" placeholder="Ex: Toque, 10 metros, À distância...">
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIGURAÇÃO DE MAGIA -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>✨ Configuração de Magia</h3>
+            <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+                Marque se esta habilidade é uma magia e preencha os campos específicos
+            </p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057; cursor: pointer;">
+                <input type="checkbox" id="eh_magia" name="eh_magia" onchange="toggleCamposMagia()" style="transform: scale(1.2);">
+                <span>Esta é uma magia</span>
+            </label>
+        </div>
+        
+        <div id="campos_magia" style="display: none;">
+            <div class="form-group">
+                <label for="elemento_magico">Elemento Mágico</label>
+                <select id="elemento_magico" name="elemento_magico">
+                    <option value="">Selecione o elemento</option>
+                    <option value="Fogo">🔥 Fogo - Poder destrutivo</option>
+                    <option value="Agua">💧 Água - Fluidez e adaptação</option>
+                    <option value="Terra">🌍 Terra - Estabilidade e força</option>
+                    <option value="Natureza">🌿 Natureza - Vida e crescimento</option>
+                    <option value="Vento">💨 Vento - Velocidade e liberdade</option>
+                    <option value="Som">🔊 Som - Vibração e harmonia</option>
+                    <option value="Sagrado">✨ Sagrado - Pureza e proteção</option>
+                    <option value="Obscuro">🌑 Obscuro - Trevas e mistério</option>
+                    <option value="Sangue">🩸 Sangue - Vida e sacrifício</option>
+                    <option value="Mental">🧠 Mental - Psique e consciência</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="conjuracao">Conjuração</label>
+                <textarea id="conjuracao" name="conjuracao" rows="3" placeholder="Como o personagem realiza a magia? Descreva cifras, gestos, componentes materiais, runas, ferramentas específicas..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW DA HABILIDADE -->
+    <div class="card" style="margin-bottom: 30px; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+        <div class="card-header">
+            <h3>👁️ Preview da Habilidade</h3>
+            <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+                Visualização em tempo real da habilidade sendo criada
+            </p>
+        </div>
+        
+        <div id="preview-habilidade" style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e9ecef;">
+            <div style="text-align: center; color: #6c757d; font-style: italic;">
+                Preencha os campos acima para ver o preview da habilidade
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO -->
+    <div style="text-align: center; margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 12px;">
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary" style="font-size: 16px; padding: 16px 32px; border: none; cursor: pointer;">
+                ✨ Criar Habilidade
+            </button>
+            <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-secondary" style="font-size: 16px; padding: 16px 32px; text-decoration: none;">
+                ❌ Cancelar
+            </a>
+        </div>
+        <p style="margin-top: 16px; color: #6c757d; font-size: 14px;">
+            A habilidade pode ser editada posteriormente
+        </p>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleCamposMagia() {
+        const checkbox = document.getElementById('eh_magia');
+        const campos = document.getElementById('campos_magia');
+        
+        if (checkbox.checked) {
+            campos.style.display = 'block';
+            campos.style.opacity = '0';
+            setTimeout(() => {
+                campos.style.opacity = '1';
+                campos.style.transition = 'opacity 0.3s ease';
+            }, 10);
+        } else {
+            campos.style.opacity = '0';
+            setTimeout(() => {
+                campos.style.display = 'none';
+            }, 300);
+        }
+        
+        atualizarPreview();
+    }
+    
+    function atualizarPreview() {
+        const nome = document.getElementById('nome').value || 'Nome da Habilidade';
+        const nivel = document.getElementById('nivel').value || '1';
+        const tipo = document.getElementById('tipo_fisico_magico').value || 'FISICO';
+        const ativacao = document.getElementById('tipo_ativacao').value || 'ATIVA';
+        const categoria = document.getElementById('tipo_habilidade').value || 'Ataque';
+        const proficiencia = document.getElementById('proficiencia').value || 'Proficiência';
+        const efeito = document.getElementById('efeito').value || 'Efeito da habilidade...';
+        const descricao = document.getElementById('descricao').value || 'Descrição da habilidade...';
+        const custo = document.getElementById('custo').value;
+        const dt = document.getElementById('dt_atributo').value;
+        const alcance = document.getElementById('alcance').value;
+        const ehMagia = document.getElementById('eh_magia').checked;
+        const elemento = document.getElementById('elemento_magico').value;
+        const conjuracao = document.getElementById('conjuracao').value;
+        
+        const nivelCores = {
+            '1': '#28a745',
+            '2': '#ffc107', 
+            '3': '#fd7e14',
+            '4': '#dc3545'
+        };
+        
+        const preview = document.getElementById('preview-habilidade');
+        
+        preview.innerHTML = `
+            <div style="position: relative;">
+                <!-- Badge de nível -->
+                <div style="position: absolute; top: 0; right: 0; background: ${nivelCores[nivel] || '#6c757d'}; color: white; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">
+                    Nível ${nivel}
+                </div>
+                
+                <!-- Tipo de habilidade/magia -->
+                <div style="position: absolute; top: 0; left: 0; background: ${ehMagia ? '#6f42c1' : '#495057'}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                    ${ehMagia ? '✨ MAGIA' : '⚔️ HABILIDADE'}
+                </div>
+                
+                <div style="margin-top: 35px;">
+                    <h3 style="font-size: 1.3rem; font-weight: 700; color: #2c3e50; margin-bottom: 12px;">
+                        ${nome}
+                    </h3>
+                    
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            ${tipo}
+                        </span>
+                        <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            ${ativacao}
+                        </span>
+                        <span style="background: #e8f5e8; color: #388e3c; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            ${categoria}
+                        </span>
+                        ${elemento ? `<span style="background: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">${elemento}</span>` : ''}
+                    </div>
+                    
+                    <!-- Proficiência -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">PROFICIÊNCIA RESPONSÁVEL</div>
+                        <div style="font-weight: 600; color: #495057;">${proficiencia}</div>
+                    </div>
+                    
+                    <!-- Efeito -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">EFEITO</div>
+                        <div style="color: #495057; font-size: 14px; line-height: 1.4;">${efeito}</div>
+                    </div>
+                    
+                    <!-- Descrição -->
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">DESCRIÇÃO</div>
+                        <div style="color: #6c757d; font-size: 13px; line-height: 1.5;">${descricao}</div>
+                    </div>
+                    
+                    <!-- Informações de combate -->
+                    ${(custo || dt || alcance) ? `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; margin-bottom: 15px; font-size: 12px;">
+                            ${custo ? `
+                                <div style="background: #fff3cd; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #856404; font-weight: 600;">CUSTO</div>
+                                    <div style="color: #6c5700;">${custo}</div>
+                                </div>
+                            ` : ''}
+                            ${dt ? `
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #0c5460; font-weight: 600;">DT</div>
+                                    <div style="color: #0a4a53;">${dt}</div>
+                                </div>
+                            ` : ''}
+                            ${alcance ? `
+                                <div style="background: #d4edda; padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #155724; font-weight: 600;">ALCANCE</div>
+                                    <div style="color: #0f4419;">${alcance}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Conjuração para magias -->
+                    ${(ehMagia && conjuracao) ? `
+                        <div style="background: linear-gradient(135deg, #f3e5f5, #e1bee7); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
+                            <div style="font-size: 12px; color: #4a148c; margin-bottom: 4px; font-weight: 600;">✨ CONJURAÇÃO</div>
+                            <div style="color: #6a1b9a; font-size: 13px; line-height: 1.4;">${conjuracao}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Atualizar preview quando campos mudarem
+        const campos = [
+            'nome', 'nivel', 'tipo_fisico_magico', 'tipo_ativacao', 'tipo_habilidade',
+            'proficiencia', 'efeito', 'descricao', 'custo', 'dt_atributo', 'alcance',
+            'eh_magia', 'elemento_magico', 'conjuracao'
+        ];
+        
+        campos.forEach(campo => {
+            const elemento = document.getElementById(campo);
+            if (elemento) {
+                elemento.addEventListener('input', atualizarPreview);
+                elemento.addEventListener('change', atualizarPreview);
+            }
+        });
+        
+        // Preview inicial
+        atualizarPreview();
+        
+        // Validação do formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const camposObrigatorios = [
+                { id: 'nome', nome: 'Nome da habilidade' },
+                { id: 'nivel', nome: 'Nível' },
+                { id: 'tipo_fisico_magico', nome: 'Tipo (Físico/Mágico)' },
+                { id: 'tipo_ativacao', nome: 'Ativação' },
+                { id: 'tipo_habilidade', nome: 'Categoria' },
+                { id: 'proficiencia', nome: 'Proficiência' },
+                { id: 'efeito', nome: 'Efeito' },
+                { id: 'descricao', nome: 'Descrição' }
+            ];
+            
+            for (let campo of camposObrigatorios) {
+                const valor = document.getElementById(campo.id).value.trim();
+                if (!valor) {
+                    e.preventDefault();
+                    alert(`Por favor, preencha o campo: ${campo.nome}`);
+                    document.getElementById(campo.id).focus();
+                    return;
+                }
+            }
+            
+            // Validar nome mínimo
+            const nome = document.getElementById('nome').value.trim();
+            if (nome.length < 2) {
+                e.preventDefault();
+                alert('O nome da habilidade deve ter pelo menos 2 caracteres!');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            // Confirmar criação
+            if (!confirm('Confirma a criação da habilidade?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Efeitos visuais nos inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#667eea';
+                this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '#e9ecef';
+                this.style.boxShadow = 'none';
+            });
+        });
+        
+        // Sugestões automáticas baseadas no tipo
+        document.getElementById('tipo_fisico_magico').addEventListener('change', function() {
+            const proficienciaSelect = document.getElementById('proficiencia');
+            const tipo = this.value;
+            
+            if (tipo === 'FISICO') {
+                // Sugerir proficiências de combate para habilidades físicas
+                const opcoesFisicas = [
+                    'Combate Desarmado', 'Armas Leves', 'Armas Pesadas', 
+                    'Armas Longa Distância', 'Arremesso', 'Guerra', 'Acrobacia'
+                ];
+                
+                // Destacar opções físicas
+                Array.from(proficienciaSelect.options).forEach(option => {
+                    if (opcoesFisicas.includes(option.value)) {
+                        option.style.fontWeight = '600';
+                        option.style.color = '#dc3545';
+                    } else {
+                        option.style.fontWeight = 'normal';
+                        option.style.color = '#495057';
+                    }
+                });
+            } else if (tipo === 'MAGICO') {
+                // Sugerir proficiências mágicas
+                const opcoesMagicas = [
+                    'Maguslogia', 'Magia Elemental', 'Magia Estímulo', 
+                    'Magia Territorial', 'Sacratismo', 'Demonologia'
+                ];
+                
+                // Destacar opções mágicas
+                Array.from(proficienciaSelect.options).forEach(option => {
+                    if (opcoesMagicas.includes(option.value)) {
+                        option.style.fontWeight = '600';
+                        option.style.color = '#6f42c1';
+                    } else {
+                        option.style.fontWeight = 'normal';
+                        option.style.color = '#495057';
+                    }
+                });
+            }
+        });
+        
+        // Auto-marcar como magia quando tipo mágico é selecionado
+        document.getElementById('tipo_fisico_magico').addEventListener('change', function() {
+            if (this.value === 'MAGICO') {
+                const checkbox = document.getElementById('eh_magia');
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    toggleCamposMagia();
+                }
+            }
+        });
+        
+        // Sugestões de custo baseadas no tipo
+        document.getElementById('tipo_fisico_magico').addEventListener('change', function() {
+            const custoInput = document.getElementById('custo');
+            const tipo = this.value;
+            
+            if (tipo === 'MAGICO') {
+                custoInput.placeholder = 'Ex: 5 Mana, 10 Mana, 2 Vigor + 3 Mana...';
+            } else if (tipo === 'FISICO') {
+                custoInput.placeholder = 'Ex: 2 Vigor, 1 Ação, 3 Vigor + 1 Ação...';
+            }
+        });
+        
+        // Contadores de caracteres
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            const contador = document.createElement('div');
+            contador.style.cssText = 'font-size: 12px; color: #6c757d; text-align: right; margin-top: 5px;';
+            contador.textContent = `0 caracteres`;
+            textarea.parentNode.appendChild(contador);
+            
+            textarea.addEventListener('input', function() {
+                const length = this.value.length;
+                contador.textContent = `${length} caracteres`;
+                
+                if (length > 500) {
+                    contador.style.color = '#dc3545';
+                } else if (length > 300) {
+                    contador.style.color = '#ffc107';
+                } else {
+                    contador.style.color = '#6c757d';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

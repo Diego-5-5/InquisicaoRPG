@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""
+Script de Debug e Teste para Sistema RPG
+Execute este script para diagnosticar problemas com as habilidades
+"""
+
+import sqlite3
+import os
+from datetime import datetime
+
+DATABASE = 'rpg_fichas.db'
+
+def verificar_estrutura_banco():
+    """Verifica a estrutura do banco de dados"""
+    print("🔍 Verificando estrutura do banco de dados...")
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar se as tabelas existem
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tabelas = cursor.fetchall()
+        print(f"📋 Tabelas encontradas: {[t[0] for t in tabelas]}")
+        
+        # Verificar estrutura da tabela fichas
+        cursor.execute("PRAGMA table_info(fichas)")
+        colunas_fichas = cursor.fetchall()
+        print(f"📊 Colunas na tabela 'fichas': {len(colunas_fichas)}")
+        
+        # Verificar se as colunas de habilidades existem
+        colunas_habilidades = [col for col in colunas_fichas if 'habilidade_slot' in col[1]]
+        print(f"🎯 Colunas de slots de habilidades: {[col[1] for col in colunas_habilidades]}")
+        
+        # Verificar estrutura da tabela habilidades
+        cursor.execute("PRAGMA table_info(habilidades)")
+        colunas_hab = cursor.fetchall()
+        print(f"⚔️ Colunas na tabela 'habilidades': {len(colunas_hab)}")
+        
+        return True
+        
+    except sqlite3.Error as e:
+        print(f"❌ Erro no banco: {e}")
+        return False
+    
+    finally:
+        conn.close()
+
+def corrigir_banco():
+    """Corrige problemas conhecidos no banco"""
+    print("🔧 Corrigindo estrutura do banco...")
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # Adicionar colunas de slots se não existirem
+        slots = ['habilidade_slot_1', 'habilidade_slot_2', 'habilidade_slot_3', 'habilidade_slot_4']
+        
+        for slot in slots:
+            try:
+                cursor.execute(f'ALTER TABLE fichas ADD COLUMN {slot} INTEGER')
+                print(f"✅ Adicionada coluna: {slot}")
+            except sqlite3.OperationalError:
+                print(f"ℹ️ Coluna {slot} já existe")
+        
+        # Recriar tabela habilidades se necessário
+        cursor.execute("DROP TABLE IF EXISTS habilidades_backup")
+        cursor.execute("CREATE TABLE habilidades_backup AS SELECT * FROM habilidades")
+        
+        cursor.execute("DROP TABLE IF EXISTS habilidades")
+        
+        cursor.execute('''
+            CREATE TABLE habilidades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ficha_id INTEGER NOT NULL,
+                
+                -- ESTRUTURA BÁSICA
+                nome TEXT NOT NULL,
+                nivel INTEGER NOT NULL CHECK(nivel >= 1 AND nivel <= 4),
+                tipo_fisico_magico TEXT NOT NULL CHECK(tipo_fisico_magico IN ('FISICO', 'MAGICO')),
+                tipo_ativacao TEXT NOT NULL CHECK(tipo_ativacao IN ('PASSIVA', 'ATIVA')),
+                tipo_habilidade TEXT NOT NULL CHECK(tipo_habilidade IN ('Ataque', 'Defesa', 'Suporte', 'Terreno')),
+                
+                -- MECÂNICAS
+                proficiencia TEXT NOT NULL,
+                efeito TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                custo TEXT DEFAULT '',
+                dt_atributo TEXT DEFAULT '',
+                alcance TEXT DEFAULT '',
+                
+                -- ESPECÍFICO PARA MAGIAS
+                eh_magia BOOLEAN DEFAULT 0,
+                conjuracao TEXT DEFAULT '',
+                elemento_magico TEXT DEFAULT '',
+                
+                -- METADADOS
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Restaurar dados se existirem
+        try:
+            cursor.execute("INSERT INTO habilidades SELECT * FROM habilidades_backup")
+            print("✅ Dados de habilidades restaurados")
+        except:
+            print("ℹ️ Nenhum dado anterior para restaurar")
+        
+        cursor.execute("DROP TABLE IF EXISTS habilidades_backup")
+        
+        conn.commit()
+        print("✅ Banco corrigido com sucesso!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao corrigir banco: {e}")
+        return False
+    
+    finally:
+        conn.close()
+
+def criar_dados_teste():
+    """Cria dados de teste"""
+    print("🧪 Criando dados de teste...")
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # Criar ficha de teste se não existir
+        cursor.execute("SELECT id FROM fichas WHERE nome = 'Teste RPG'")
+        ficha_teste = cursor.fetchone()
+        
+        if not ficha_teste:
+            cursor.execute('''
+                INSERT INTO fichas (
+                    nome, tipo_corpo, classe, categoria, elemento,
+                    vida_atual, vida_maxima, mana_atual, mana_maxima,
+                    vigor_atual, vigor_maximo, sanidade_atual, sanidade_maxima
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                'Teste RPG', 'Neutro', 'Soldado', 'Combatentes', 'Fogo',
+                15, 15, 10, 10, 10, 10, 100, 100
+            ))
+            ficha_id = cursor.lastrowid
+            print(f"✅ Ficha de teste criada com ID: {ficha_id}")
+        else:
+            ficha_id = ficha_teste[0]
+            print(f"ℹ️ Usando ficha de teste existente ID: {ficha_id}")
+        
+        # Criar habilidades de teste
+        habilidades_teste = [
+            {
+                'nome': 'Golpe Devastador',
+                'nivel': 2,
+                'tipo_fisico_magico': 'FISICO',
+                'tipo_ativacao': 'ATIVA',
+                'tipo_habilidade': 'Ataque',
+                'proficiencia': 'Armas Pesadas',
+                'efeito': 'Causa 2d6+Força de dano',
+                'descricao': 'Um golpe poderoso que pode quebrar armaduras',
+                'custo': '2 Vigor',
+                'eh_magia': False
+            },
+            {
+                'nome': 'Bola de Fogo',
+                'nivel': 3,
+                'tipo_fisico_magico': 'MAGICO',
+                'tipo_ativacao': 'ATIVA',
+                'tipo_habilidade': 'Ataque',
+                'proficiencia': 'Magia Elemental',
+                'efeito': 'Causa 3d6 de dano de fogo em área',
+                'descricao': 'Uma esfera de fogo que explode ao atingir o alvo',
+                'custo': '5 Mana',
+                'eh_magia': True,
+                'elemento_magico': 'Fogo',
+                'conjuracao': 'Gestos somáticos e palavra "Ignis"'
+            }
+        ]
+        
+        for hab in habilidades_teste:
+            # Verificar se já existe
+            cursor.execute("SELECT id FROM habilidades WHERE nome = ? AND ficha_id = ?", 
+                         (hab['nome'], ficha_id))
+            if not cursor.fetchone():
+                cursor.execute('''
+                    INSERT INTO habilidades (
+                        ficha_id, nome, nivel, tipo_fisico_magico, tipo_ativacao, tipo_habilidade,
+                        proficiencia, efeito, descricao, custo, eh_magia, elemento_magico, conjuracao
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    ficha_id,
+                    hab['nome'],
+                    hab['nivel'],
+                    hab['tipo_fisico_magico'],
+                    hab['tipo_ativacao'],
+                    hab['tipo_habilidade'],
+                    hab['proficiencia'],
+                    hab['efeito'],
+                    hab['descricao'],
+                    hab.get('custo', ''),
+                    hab['eh_magia'],
+                    hab.get('elemento_magico', ''),
+                    hab.get('conjuracao', '')
+                ))
+                print(f"✅ Habilidade criada: {hab['nome']}")
+        
+        conn.commit()
+        return ficha_id
+        
+    except Exception as e:
+        print(f"❌ Erro ao criar dados de teste: {e}")
+        return None
+    
+    finally:
+        conn.close()
+
+def testar_consultas():
+    """Testa consultas importantes"""
+    print("🔬 Testando consultas...")
+    
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    
+    try:
+        # Listar fichas
+        fichas = conn.execute("SELECT id, nome FROM fichas").fetchall()
+        print(f"📋 Fichas encontradas: {len(fichas)}")
+        
+        for ficha in fichas:
+            print(f"  - ID {ficha['id']}: {ficha['nome']}")
+            
+            # Listar habilidades de cada ficha
+            habilidades = conn.execute("SELECT id, nome FROM habilidades WHERE ficha_id = ?", 
+                                     (ficha['id'],)).fetchall()
+            print(f"    ⚔️ Habilidades: {len(habilidades)}")
+            
+            for hab in habilidades:
+                print(f"      - ID {hab['id']}: {hab['nome']}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro nas consultas: {e}")
+        return False
+    
+    finally:
+        conn.close()
+
+def verificar_arquivos():
+    """Verifica se os arquivos necessários existem"""
+    print("📁 Verificando arquivos...")
+    
+    arquivos_necessarios = [
+        'templates/base.html',
+        'templates/index.html',
+        'templates/criar_ficha.html',
+        'templates/editar_ficha.html',
+        'templates/visualizar_ficha.html',
+        'templates/gerenciar_habilidades.html',
+        'templates/criar_habilidade.html',
+        'templates/editar_habilidade.html'
+    ]
+    
+    missing_files = []
+    for arquivo in arquivos_necessarios:
+        if os.path.exists(arquivo):
+            print(f"✅ {arquivo}")
+        else:
+            print(f"❌ {arquivo} - FALTANDO!")
+            missing_files.append(arquivo)
+    
+    if missing_files:
+        print(f"\n⚠️ Arquivos faltando: {len(missing_files)}")
+        print("📝 Certifique-se de criar estes arquivos HTML na pasta templates/")
+        return False
+    
+    return True
+
+def main():
+    """Função principal do script de debug"""
+    print("🚀 Iniciando diagnóstico do Sistema RPG")
+    print("=" * 50)
+    
+    # Verificar arquivos
+    arquivos_ok = verificar_arquivos()
+    
+    # Verificar banco
+    banco_ok = verificar_estrutura_banco()
+    
+    if not banco_ok:
+        print("\n🔧 Tentando corrigir banco...")
+        banco_ok = corrigir_banco()
+    
+    # Criar dados de teste
+    if banco_ok:
+        ficha_teste_id = criar_dados_teste()
+        if ficha_teste_id:
+            print(f"\n🎯 Ficha de teste criada: ID {ficha_teste_id}")
+    
+    # Testar consultas
+    consultas_ok = testar_consultas()
+    
+    print("\n" + "=" * 50)
+    print("📊 RESUMO DO DIAGNÓSTICO")
+    print(f"📁 Arquivos: {'✅ OK' if arquivos_ok else '❌ PROBLEMAS'}")
+    print(f"🗄️ Banco: {'✅ OK' if banco_ok else '❌ PROBLEMAS'}")
+    print(f"🔍 Consultas: {'✅ OK' if consultas_ok else '❌ PROBLEMAS'}")
+    
+    if arquivos_ok and banco_ok and consultas_ok:
+        print("\n🎉 Sistema funcionando corretamente!")
+        print("🌐 Execute 'python app.py' para iniciar o servidor")
+    else:
+        print("\n⚠️ Problemas encontrados que precisam ser corrigidos")
+    
+    print("=" * 50)
+
+if __name__ == '__main__':
+    main()

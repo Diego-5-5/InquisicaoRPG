@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Editar {{ habilidade.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">✏️ Editar {{ habilidade.nome }}</h1>
+    <p class="page-subtitle">
+        Faça as alterações necessárias na habilidade de {{ ficha.nome }}
+    </p>
+    
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            ⚔️ Ver Habilidades
+        </a>
+        <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            👁️ Ver Ficha
+        </a>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('atualizar_habilidade', habilidade_id=habilidade.id) }}" style="max-width: 1000px; margin: 0 auto;">
+    
+    <!-- INFORMAÇÕES BÁSICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📋 Estrutura Básica</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nome">Nome da Habilidade *</label>
+                <input type="text" id="nome" name="nome" value="{{ habilidade.nome }}" required placeholder="Ex: Golpe Devastador, Bola de Fogo...">
+            </div>
+            
+            <div class="form-group">
+                <label for="nivel">Nível (1-4) *</label>
+                <select id="nivel" name="nivel" required>
+                    <option value="">Selecione o nível</option>
+                    <option value="1" {% if habilidade.nivel == 1 %}selected{% endif %}>🟢 Nível 1 - Iniciante</option>
+                    <option value="2" {% if habilidade.nivel == 2 %}selected{% endif %}>🟡 Nível 2 - Intermediário</option>
+                    <option value="3" {% if habilidade.nivel == 3 %}selected{% endif %}>🟠 Nível 3 - Avançado</option>
+                    <option value="4" {% if habilidade.nivel == 4 %}selected{% endif %}>🔴 Nível 4 - Mestre</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tipo_fisico_magico">Tipo *</label>
+                <select id="tipo_fisico_magico" name="tipo_fisico_magico" required>
+                    <option value="">Selecione o tipo</option>
+                    <option value="FISICO" {% if habilidade.tipo_fisico_magico == 'FISICO' %}selected{% endif %}>⚔️ Físico - Baseado em atributos físicos</option>
+                    <option value="MAGICO" {% if habilidade.tipo_fisico_magico == 'MAGICO' %}selected{% endif %}>🔮 Mágico - Usa mana e magia</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_ativacao">Ativação *</label>
+                <select id="tipo_ativacao" name="tipo_ativacao" required>
+                    <option value="">Selecione a ativação</option>
+                    <option value="ATIVA" {% if habilidade.tipo_ativacao == 'ATIVA' %}selected{% endif %}>⚡ Ativa - Requer ação para usar</option>
+                    <option value="PASSIVA" {% if habilidade.tipo_ativacao == 'PASSIVA' %}selected{% endif %}>🔄 Passiva - Sempre ativa</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_habilidade">Categoria *</label>
+                <select id="tipo_habilidade" name="tipo_habilidade" required>
+                    <option value="">Selecione a categoria</option>
+                    <option value="Ataque" {% if habilidade.tipo_habilidade == 'Ataque' %}selected{% endif %}>⚔️ Ataque - Causa dano</option>
+                    <option value="Defesa" {% if habilidade.tipo_habilidade == 'Defesa' %}selected{% endif %}>🛡️ Defesa - Protege ou reduz dano</option>
+                    <option value="Suporte" {% if habilidade.tipo_habilidade == 'Suporte' %}selected{% endif %}>💚 Suporte - Cura ou auxilia</option>
+                    <option value="Terreno" {% if habilidade.tipo_habilidade == 'Terreno' %}selected{% endif %}>🌍 Terreno - Modifica ambiente</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- MECÂNICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>⚙️ Mecânicas</h3>
+        </div>
+        
+        <div class="form-group">
+            <label for="proficiencia">Proficiência Responsável *</label>
+            <select id="proficiencia" name="proficiencia" required>
+                <option value="">Selecione a proficiência</option>
+                
+                <optgroup label="🎯 Proficiências Gerais">
+                    <option value="Sobrevivência" {% if habilidade.proficiencia == 'Sobrevivência' %}selected{% endif %}>🏕️ Sobrevivência</option>
+                    <option value="Botânica" {% if habilidade.proficiencia == 'Botânica' %}selected{% endif %}>🌱 Botânica</option>
+                    <option value="Culinária" {% if habilidade.proficiencia == 'Culinária' %}selected{% endif %}>🍳 Culinária</option>
+                    <option value="Religião" {% if habilidade.proficiencia == 'Religião' %}selected{% endif %}>⛪ Religião</option>
+                    <option value="Pescaria" {% if habilidade.proficiencia == 'Pescaria' %}selected{% endif %}>🎣 Pescaria</option>
+                    <option value="Ferraria" {% if habilidade.proficiencia == 'Ferraria' %}selected{% endif %}>🔨 Ferraria</option>
+                    <option value="Artesanato" {% if habilidade.proficiencia == 'Artesanato' %}selected{% endif %}>🎨 Artesanato</option>
+                    <option value="Mixologia" {% if habilidade.proficiencia == 'Mixologia' %}selected{% endif %}>🍺 Mixologia</option>
+                    <option value="Música" {% if habilidade.proficiencia == 'Música' %}selected{% endif %}>🎵 Música</option>
+                    <option value="Jogos de Azar" {% if habilidade.proficiencia == 'Jogos de Azar' %}selected{% endif %}>🎲 Jogos de Azar</option>
+                    <option value="Rataria" {% if habilidade.proficiencia == 'Rataria' %}selected{% endif %}>🐀 Rataria</option>
+                    <option value="Navegação" {% if habilidade.proficiencia == 'Navegação' %}selected{% endif %}>⛵ Navegação</option>
+                    <option value="Sacratismo" {% if habilidade.proficiencia == 'Sacratismo' %}selected{% endif %}>✨ Sacratismo</option>
+                    <option value="Demonologia" {% if habilidade.proficiencia == 'Demonologia' %}selected{% endif %}>👹 Demonologia</option>
+                    <option value="Guerra" {% if habilidade.proficiencia == 'Guerra' %}selected{% endif %}>⚔️ Guerra</option>
+                    <option value="Acrobacia" {% if habilidade.proficiencia == 'Acrobacia' %}selected{% endif %}>🤸 Acrobacia</option>
+                </optgroup>
+                
+                <optgroup label="⚔️ Proficiências de Combate">
+                    <option value="Combate Desarmado" {% if habilidade.proficiencia == 'Combate Desarmado' %}selected{% endif %}>👊 Combate Desarmado</option>
+                    <option value="Armas Leves" {% if habilidade.proficiencia == 'Armas Leves' %}selected{% endif %}>🗡️ Armas Leves</option>
+                    <option value="Armas Pesadas" {% if habilidade.proficiencia == 'Armas Pesadas' %}selected{% endif %}>⚔️ Armas Pesadas</option>
+                    <option value="Armas Longa Distância" {% if habilidade.proficiencia == 'Armas Longa Distância' %}selected{% endif %}>🏹 Armas Longa Distância</option>
+                    <option value="Arremesso" {% if habilidade.proficiencia == 'Arremesso' %}selected{% endif %}>🎯 Arremesso</option>
+                </optgroup>
+                
+                <optgroup label="🔮 Perícias Mágicas">
+                    <option value="Maguslogia" {% if habilidade.proficiencia == 'Maguslogia' %}selected{% endif %}>📚 Maguslogia</option>
+                    <option value="Magia Elemental" {% if habilidade.proficiencia == 'Magia Elemental' %}selected{% endif %}>🌊 Magia Elemental</option>
+                    <option value="Magia Estímulo" {% if habilidade.proficiencia == 'Magia Estímulo' %}selected{% endif %}>💫 Magia Estímulo</option>
+                    <option value="Magia Territorial" {% if habilidade.proficiencia == 'Magia Territorial' %}selected{% endif %}>🗺️ Magia Territorial</option>
+                </optgroup>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="efeito">Efeito *</label>
+            <textarea id="efeito" name="efeito" rows="3" required placeholder="Descreva o efeito mecânico da habilidade">{{ habilidade.efeito }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="descricao">Descrição *</label>
+            <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva como a habilidade/magia é executada">{{ habilidade.descricao }}</textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="custo">Custo</label>
+                <input type="text" id="custo" name="custo" value="{{ habilidade.custo or '' }}" placeholder="Ex: 5 Mana, 2 Vigor...">
+            </div>
+            
+            <div class="form-group">
+                <label for="dt_atributo">DT + Atributo</label>
+                <input type="text" id="dt_atributo" name="dt_atributo" value="{{ habilidade.dt_atributo or '' }}" placeholder="Ex: DT15 + Força...">
+            </div>
+            
+            <div class="form-group">
+                <label for="alcance">Alcance</label>
+                <input type="text" id="alcance" name="alcance" value="{{ habilidade.alcance or '' }}" placeholder="Ex: Toque, 10 metros...">
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIGURAÇÃO DE MAGIA -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>✨ Configuração de Magia</h3>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #495057; cursor: pointer;">
+                <input type="checkbox" id="eh_magia" name="eh_magia" {% if habilidade.eh_magia %}checked{% endif %} onchange="toggleCamposMagia()" style="transform: scale(1.2);">
+                <span>Esta é uma magia</span>
+            </label>
+        </div>
+        
+        <div id="campos_magia" style="{% if not habilidade.eh_magia %}display: none;{% endif %}">
+            <div class="form-group">
+                <label for="elemento_magico">Elemento Mágico</label>
+                <select id="elemento_magico" name="elemento_magico">
+                    <option value="">Selecione o elemento</option>
+                    <option value="Fogo" {% if habilidade.elemento_magico == 'Fogo' %}selected{% endif %}>🔥 Fogo - Poder destrutivo</option>
+                    <option value="Agua" {% if habilidade.elemento_magico == 'Agua' %}selected{% endif %}>💧 Água - Fluidez e adaptação</option>
+                    <option value="Terra" {% if habilidade.elemento_magico == 'Terra' %}selected{% endif %}>🌍 Terra - Estabilidade e força</option>
+                    <option value="Natureza" {% if habilidade.elemento_magico == 'Natureza' %}selected{% endif %}>🌿 Natureza - Vida e crescimento</option>
+                    <option value="Vento" {% if habilidade.elemento_magico == 'Vento' %}selected{% endif %}>💨 Vento - Velocidade e liberdade</option>
+                    <option value="Som" {% if habilidade.elemento_magico == 'Som' %}selected{% endif %}>🔊 Som - Vibração e harmonia</option>
+                    <option value="Sagrado" {% if habilidade.elemento_magico == 'Sagrado' %}selected{% endif %}>✨ Sagrado - Pureza e proteção</option>
+                    <option value="Obscuro" {% if habilidade.elemento_magico == 'Obscuro' %}selected{% endif %}>🌑 Obscuro - Trevas e mistério</option>
+                    <option value="Sangue" {% if habilidade.elemento_magico == 'Sangue' %}selected{% endif %}>🩸 Sangue - Vida e sacrifício</option>
+                    <option value="Mental" {% if habilidade.elemento_magico == 'Mental' %}selected{% endif %}>🧠 Mental - Psique e consciência</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="conjuracao">Conjuração</label>
+                <textarea id="conjuracao" name="conjuracao" rows="3" placeholder="Como o personagem realiza a magia?">{{ habilidade.conjuracao or '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO -->
+    <div style="text-align: center; margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 12px;">
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary" style="font-size: 16px; padding: 16px 32px; border: none; cursor: pointer;">
+                💾 Salvar Alterações
+            </button>
+            <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-secondary" style="font-size: 16px; padding: 16px 32px; text-decoration: none;">
+                ❌ Cancelar
+            </a>
+        </div>
+        <p style="margin-top: 16px; color: #6c757d; font-size: 14px;">
+            Confirme as alterações antes de salvar
+        </p>
+    </div>
+</form>
+
+<!-- Informações da Habilidade -->
+<div class="card" style="margin-top: 30px; max-width: 1000px; margin-left: auto; margin-right: auto;">
+    <div class="card-header">
+        <h3>📊 Informações da Habilidade</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ID DA HABILIDADE</div>
+            <div style="font-size: 20px; font-weight: 700; color: #2c3e50;">#{{ habilidade.id }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">CRIADA EM</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ habilidade.criado_em.split('.')[0] if habilidade.criado_em else 'N/A' }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ÚLTIMA ATUALIZAÇÃO</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ habilidade.atualizado_em.split('.')[0] if habilidade.atualizado_em else 'N/A' }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleCamposMagia() {
+        const checkbox = document.getElementById('eh_magia');
+        const campos = document.getElementById('campos_magia');
+        
+        if (checkbox.checked) {
+            campos.style.display = 'block';
+            campos.style.opacity = '0';
+            setTimeout(() => {
+                campos.style.opacity = '1';
+                campos.style.transition = 'opacity 0.3s ease';
+            }, 10);
+        } else {
+            campos.style.opacity = '0';
+            setTimeout(() => {
+                campos.style.display = 'none';
+            }, 300);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validação do formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const camposObrigatorios = [
+                { id: 'nome', nome: 'Nome da habilidade' },
+                { id: 'nivel', nome: 'Nível' },
+                { id: 'tipo_fisico_magico', nome: 'Tipo (Físico/Mágico)' },
+                { id: 'tipo_ativacao', nome: 'Ativação' },
+                { id: 'tipo_habilidade', nome: 'Categoria' },
+                { id: 'proficiencia', nome: 'Proficiência' },
+                { id: 'efeito', nome: 'Efeito' },
+                { id: 'descricao', nome: 'Descrição' }
+            ];
+            
+            for (let campo of camposObrigatorios) {
+                const valor = document.getElementById(campo.id).value.trim();
+                if (!valor) {
+                    e.preventDefault();
+                    alert(`Por favor, preencha o campo: ${campo.nome}`);
+                    document.getElementById(campo.id).focus();
+                    return;
+                }
+            }
+            
+            // Validar nome mínimo
+            const nome = document.getElementById('nome').value.trim();
+            if (nome.length < 2) {
+                e.preventDefault();
+                alert('O nome da habilidade deve ter pelo menos 2 caracteres!');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            // Confirmar alterações
+            if (!confirm('Tem certeza que deseja salvar as alterações na habilidade?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Efeitos visuais nos inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                if (!this.readOnly) {
+                    this.style.borderColor = '#667eea';
+                    this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '#e9ecef';
+                this.style.boxShadow = 'none';
+            });
+        });
+        
+        // Indicador de mudanças não salvas
+        let hasChanges = false;
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                hasChanges = true;
+            });
+        });
+        
+        window.addEventListener('beforeunload', function(e) {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = 'Você tem alterações não salvas. Tem certeza que deseja sair?';
+            }
+        });
+        
+        // Remover aviso ao submeter
+        form.addEventListener('submit', function() {
+            hasChanges = false;
+        });
+    });
+</script>
+{% endblock %}

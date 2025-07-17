@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ficha.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🎭 {{ ficha.nome }}</h1>
+    <div style="display: flex; justify-content: center; gap: 20px; margin: 20px 0; flex-wrap: wrap; color: #6c757d; font-size: 16px;">
+        <span><strong>{{ ficha.classe }}</strong> • {{ ficha.categoria }}</span>
+        <span>{{ ficha.tipo_corpo }}</span>
+        <span>{{ ficha.elemento }}</span>
+    </div>
+    
+    <div style="margin-top: 25px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('editar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            ✏️ Editar Ficha
+        </a>
+        <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            ⚔️ Gerenciar Habilidades
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none;">
+            🏠 Voltar ao Início
+        </a>
+    </div>
+</div>
+
+<!-- RODA DE HABILIDADES -->
+<div class="card" style="margin-bottom: 30px;">
+    <div class="card-header">
+        <h3>🎯 Roda de Habilidades</h3>
+        <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+            Selecione até 4 habilidades para usar em combate
+        </p>
+    </div>
+    
+    <form method="POST" action="{{ url_for('atualizar_roda_habilidades', ficha_id=ficha.id) }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            {% for i in range(1, 5) %}
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 2px solid #e9ecef;">
+                    <label for="habilidade_slot_{{ i }}" style="font-weight: 600; color: #495057; margin-bottom: 10px; display: block;">
+                        🎲 Slot {{ i }}
+                    </label>
+                    <select name="habilidade_slot_{{ i }}" id="habilidade_slot_{{ i }}" style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 6px;">
+                        <option value="">Nenhuma habilidade</option>
+                        {% for habilidade in todas_habilidades %}
+                            <option value="{{ habilidade.id }}" 
+                                {% if ficha['habilidade_slot_' + i|string] == habilidade.id %}selected{% endif %}>
+                                {{ habilidade.nome }} (Nível {{ habilidade.nivel }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div style="text-align: center;">
+            <button type="submit" class="btn-primary" style="padding: 12px 24px; border: none; cursor: pointer;">
+                💾 Salvar Roda de Habilidades
+            </button>
+        </div>
+    </form>
+    
+    <!-- Exibir habilidades selecionadas -->
+    {% if habilidades_roda %}
+        <div style="margin-top: 30px; border-top: 2px solid #e9ecef; padding-top: 20px;">
+            <h4 style="margin-bottom: 20px; color: #495057;">⚡ Habilidades Ativas</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                {% for habilidade in habilidades_roda %}
+                    <div style="background: linear-gradient(135deg, #fff, #f8f9fa); padding: 20px; border-radius: 12px; border: 2px solid #667eea; position: relative;">
+                        <!-- Badge de nível -->
+                        <div style="position: absolute; top: 12px; right: 12px; background: #667eea; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                            Nível {{ habilidade.nivel }}
+                        </div>
+                        
+                        <h5 style="color: #2c3e50; margin-bottom: 12px; font-size: 1.2rem;">{{ habilidade.nome }}</h5>
+                        
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                {{ habilidade.tipo_fisico_magico }}
+                            </span>
+                            <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                {{ habilidade.tipo_ativacao }}
+                            </span>
+                            <span style="background: #e8f5e8; color: #388e3c; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                {{ habilidade.tipo_habilidade }}
+                            </span>
+                        </div>
+                        
+                        <div style="color: #6c757d; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                            {{ habilidade.efeito }}
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; font-size: 12px;">
+                            {% if habilidade.custo %}
+                                <div><strong>Custo:</strong> {{ habilidade.custo }}</div>
+                            {% endif %}
+                            {% if habilidade.alcance %}
+                                <div><strong>Alcance:</strong> {{ habilidade.alcance }}</div>
+                            {% endif %}
+                            {% if habilidade.dt_atributo %}
+                                <div><strong>DT:</strong> {{ habilidade.dt_atributo }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- STATUS PRINCIPAL COM CONTROLES INTERATIVOS -->
+<div class="card" style="margin-bottom: 30px;">
+    <div class="card-header">
+        <h3>📊 Status Principal</h3>
+        <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+            Clique e arraste os controles para ajustar os valores em tempo real
+        </p>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+        
+        <!-- Vida -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 4px solid #dc3545;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #dc3545; margin: 0;">❤️ Vida</h4>
+                <span id="vida-display" style="font-size: 20px; font-weight: 700; color: #dc3545;">
+                    {{ ficha.vida_atual }}/{{ ficha.vida_maxima }}
+                </span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 15px;">
+                <input type="range" id="vida-slider" min="0" max="{{ ficha.vida_maxima }}" 
+                       value="{{ ficha.vida_atual }}" 
+                       style="flex: 1; height: 8px; border-radius: 5px; background: #ddd; outline: none; cursor: pointer;">
+                <input type="number" id="vida-input" min="0" max="{{ ficha.vida_maxima }}" 
+                       value="{{ ficha.vida_atual }}" 
+                       style="width: 80px; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; text-align: center;">
+            </div>
+            <div style="background: #e9ecef; border-radius: 10px; height: 12px; overflow: hidden;">
+                <div id="vida-bar" style="height: 100%; background: linear-gradient(90deg, #28a745, #ffc107, #dc3545); transition: width 0.3s ease; border-radius: 10px;"></div>
+            </div>
+        </div>
+        
+        <!-- Mana -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 4px solid #007bff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #007bff; margin: 0;">🔮 Mana</h4>
+                <span id="mana-display" style="font-size: 20px; font-weight: 700; color: #007bff;">
+                    {{ ficha.mana_atual }}/{{ ficha.mana_maxima }}
+                </span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 15px;">
+                <input type="range" id="mana-slider" min="0" max="{{ ficha.mana_maxima }}" 
+                       value="{{ ficha.mana_atual }}" 
+                       style="flex: 1; height: 8px; border-radius: 5px; background: #ddd; outline: none; cursor: pointer;">
+                <input type="number" id="mana-input" min="0" max="{{ ficha.mana_maxima }}" 
+                       value="{{ ficha.mana_atual }}" 
+                       style="width: 80px; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; text-align: center;">
+            </div>
+            <div style="background: #e9ecef; border-radius: 10px; height: 12px; overflow: hidden;">
+                <div id="mana-bar" style="height: 100%; background: linear-gradient(90deg, #007bff, #17a2b8); transition: width 0.3s ease; border-radius: 10px;"></div>
+            </div>
+        </div>
+        
+        <!-- Vigor -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 4px solid #ffc107;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #e6a500; margin: 0;">⚡ Vigor</h4>
+                <span id="vigor-display" style="font-size: 20px; font-weight: 700; color: #e6a500;">
+                    {{ ficha.vigor_atual }}/{{ ficha.vigor_maximo }}
+                </span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 15px;">
+                <input type="range" id="vigor-slider" min="0" max="{{ ficha.vigor_maximo }}" 
+                       value="{{ ficha.vigor_atual }}" 
+                       style="flex: 1; height: 8px; border-radius: 5px; background: #ddd; outline: none; cursor: pointer;">
+                <input type="number" id="vigor-input" min="0" max="{{ ficha.vigor_maximo }}" 
+                       value="{{ ficha.vigor_atual }}" 
+                       style="width: 80px; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; text-align: center;">
+            </div>
+            <div style="background: #e9ecef; border-radius: 10px; height: 12px; overflow: hidden;">
+                <div id="vigor-bar" style="height: 100%; background: linear-gradient(90deg, #ffc107, #fd7e14); transition: width 0.3s ease; border-radius: 10px;"></div>
+            </div>
+        </div>
+        
+        <!-- Sanidade -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 4px solid #6f42c1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="color: #6f42c1; margin: 0;">🧠 Sanidade</h4>
+                <span id="sanidade-display" style="font-size: 20px; font-weight: 700; color: #6f42c1;">
+                    {{ ficha.sanidade_atual }}/{{ ficha.sanidade_maxima }}
+                </span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 15px;">
+                <input type="range" id="sanidade-slider" min="0" max="{{ ficha.sanidade_maxima }}" 
+                       value="{{ ficha.sanidade_atual }}" 
+                       style="flex: 1; height: 8px; border-radius: 5px; background: #ddd; outline: none; cursor: pointer;">
+                <input type="number" id="sanidade-input" min="0" max="{{ ficha.sanidade_maxima }}" 
+                       value="{{ ficha.sanidade_atual }}" 
+                       style="width: 80px; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; text-align: center;">
+            </div>
+            <div style="background: #e9ecef; border-radius: 10px; height: 12px; overflow: hidden;">
+                <div id="sanidade-bar" style="height: 100%; background: linear-gradient(90deg, #6f42c1, #e83e8c); transition: width 0.3s ease; border-radius: 10px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AÇÕES RÁPIDAS -->
+<div style="text-align: center; margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
+    <h4 style="margin-bottom: 20px; color: #495057;">⚡ Ações Rápidas</h4>
+    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <button onclick="restaurarStatus('vida')" class="btn" style="background: linear-gradient(45deg, #28a745, #20c997); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
+            🩹 Restaurar Vida
+        </button>
+        <button onclick="restaurarStatus('mana')" class="btn" style="background: linear-gradient(45deg, #007bff, #17a2b8); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
+            🔮 Restaurar Mana
+        </button>
+        <button onclick="restaurarStatus('vigor')" class="btn" style="background: linear-gradient(45deg, #ffc107, #fd7e14); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
+            ⚡ Restaurar Vigor
+        </button>
+        <button onclick="restaurarStatus('sanidade')" class="btn" style="background: linear-gradient(45deg, #6f42c1, #e83e8c); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
+            🧠 Restaurar Sanidade
+        </button>
+        <button onclick="descansoCompleto()" class="btn" style="background: linear-gradient(45deg, #17a2b8, #6610f2); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
+            😴 Descanso Completo
+        </button>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px;">
+    
+    <!-- ATRIBUTOS -->
+    <div class="card">
+        <div class="card-header">
+            <h3>⚡ Atributos</h3>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="label">💪 Força</div>
+                <div class="value">{{ ficha.forca }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">🏃 Destreza</div>
+                <div class="value">{{ ficha.destreza }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">🔮 Magia</div>
+                <div class="value">{{ ficha.magia }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">🛡️ Constituição</div>
+                <div class="value">{{ ficha.constituicao }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">⚡ Agilidade</div>
+                <div class="value">{{ ficha.agilidade }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">🦉 Sabedoria</div>
+                <div class="value">{{ ficha.sabedoria }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">💎 Carisma</div>
+                <div class="value">{{ ficha.carisma }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">✨ Fé</div>
+                <div class="value">{{ ficha.fe }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEFESAS E COMBATE -->
+    <div class="card">
+        <div class="card-header">
+            <h3>🛡️ Defesas e Combate</h3>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;">
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">🛡️ ARMADURA FÍSICA</div>
+                <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">{{ ficha.armadura_fisica }}</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;">
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">✨ ARMADURA MÁGICA</div>
+                <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">{{ ficha.armadura_magica }}</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;">
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">🏃 DESLOCAMENTO</div>
+                <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">{{ ficha.deslocamento }}m</div>
+            </div>
+            <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;">
+                <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">💪 RESISTÊNCIA</div>
+                <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">{{ ficha.resistencia }}</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-radius: 10px; text-align: center;">
+            <div style="font-size: 14px; color: #856404; margin-bottom: 8px; font-weight: 600;">💰 OURO</div>
+            <div style="font-size: 28px; font-weight: 700; color: #856404;">{{ ficha.ouro }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- EQUIPAMENTOS -->
+{% if ficha.armadura or ficha.arma or ficha.complemento or ficha.amuleto1 or ficha.amuleto2 %}
+<div class="card" style="margin-top: 30px;">
+    <div class="card-header">
+        <h3>⚔️ Equipamentos</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        {% if ficha.armadura %}
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #6c757d;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">🛡️ Armadura</div>
+            <div style="color: #6c757d;">{{ ficha.armadura }}</div>
+        </div>
+        {% endif %}
+        {% if ficha.arma %}
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #dc3545;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">⚔️ Arma</div>
+            <div style="color: #6c757d;">{{ ficha.arma }}</div>
+        </div>
+        {% endif %}
+        {% if ficha.complemento %}
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #28a745;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">🔧 Complemento</div>
+            <div style="color: #6c757d;">{{ ficha.complemento }}</div>
+        </div>
+        {% endif %}
+        {% if ficha.amuleto1 %}
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #ffc107;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">📿 Amuleto 1</div>
+            <div style="color: #6c757d;">{{ ficha.amuleto1 }}</div>
+        </div>
+        {% endif %}
+        {% if ficha.amuleto2 %}
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #17a2b8;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">📿 Amuleto 2</div>
+            <div style="color: #6c757d;">{{ ficha.amuleto2 }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- PROFICIÊNCIAS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 30px;">
+    
+    <!-- Proficiências Gerais -->
+    <div class="card">
+        <div class="card-header">
+            <h3>🎯 Proficiências Gerais</h3>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🏕️ Sobrevivência</span>
+                <strong>{{ ficha.prof_sobrevivencia }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🌱 Botânica</span>
+                <strong>{{ ficha.prof_botanica }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🍳 Culinária</span>
+                <strong>{{ ficha.prof_culinaria }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>⛪ Religião</span>
+                <strong>{{ ficha.prof_religiao }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🎣 Pescaria</span>
+                <strong>{{ ficha.prof_pescaria }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🔨 Ferraria</span>
+                <strong>{{ ficha.prof_ferraria }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🎨 Artesanato</span>
+                <strong>{{ ficha.prof_artesanato }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🍺 Mixologia</span>
+                <strong>{{ ficha.prof_mixologia }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🎵 Música</span>
+                <strong>{{ ficha.prof_musica }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🎲 Jogos de Azar</span>
+                <strong>{{ ficha.prof_jogos_azar }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🐀 Rataria</span>
+                <strong>{{ ficha.prof_rataria }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>⛵ Navegação</span>
+                <strong>{{ ficha.prof_navegacao }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>✨ Sacratismo</span>
+                <strong>{{ ficha.prof_sacratismo }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>👹 Demonologia</span>
+                <strong>{{ ficha.prof_demonologia }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>⚔️ Guerra</span>
+                <strong>{{ ficha.prof_guerra }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                <span>🤸 Acrobacia</span>
+                <strong>{{ ficha.prof_acrobacia }}/5</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Proficiências de Combate -->
+    <div class="card">
+        <div class="card-header">
+            <h3>⚔️ Proficiências de Combate</h3>
+        </div>
+        <div style="display: grid; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #dc3545;">
+                <span style="font-weight: 600;">👊 Combate Desarmado</span>
+                <strong style="color: #dc3545;">{{ ficha.prof_combate_desarmado }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                <span style="font-weight: 600;">🗡️ Armas Leves</span>
+                <strong style="color: #28a745;">{{ ficha.prof_armas_leves }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #6c757d;">
+                <span style="font-weight: 600;">⚔️ Armas Pesadas</span>
+                <strong style="color: #6c757d;">{{ ficha.prof_armas_pesadas }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                <span style="font-weight: 600;">🏹 Armas Longa Distância</span>
+                <strong style="color: #17a2b8;">{{ ficha.prof_armas_longa_distancia }}/5</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <span style="font-weight: 600;">🎯 Arremesso</span>
+                <strong style="color: #e6a500;">{{ ficha.prof_arremesso }}/5</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PERÍCIAS MÁGICAS -->
+<div class="card" style="margin-top: 30px;">
+    <div class="card-header">
+        <h3>🔮 Perícias Mágicas</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #17a2b8;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">📚 Maguslogia</div>
+            <div style="font-size: 20px; font-weight: 700; color: #17a2b8;">{{ ficha.per_maguslogia }}/5</div>
+        </div>
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #007bff;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">🌊 Magia Elemental</div>
+            <div style="font-size: 20px; font-weight: 700; color: #007bff;">{{ ficha.per_magia_elemental }}/5</div>
+        </div>
+        <div style="padding: 16px; background: #e9ecef; border-radius: 10px; border-left: 4px solid #6c757d; opacity: 0.6;">
+            <div style="font-weight: 600; color: #6c757d; margin-bottom: 8px;">🌑 Magia Obscura</div>
+            <div style="font-size: 20px; font-weight: 700; color: #6c757d;">{{ ficha.per_magia_obscura }}/5 <span style="font-size: 12px;">(Bloqueada)</span></div>
+        </div>
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #6f42c1;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">💫 Magia Estímulo</div>
+            <div style="font-size: 20px; font-weight: 700; color: #6f42c1;">{{ ficha.per_magia_estimulo }}/5</div>
+        </div>
+        <div style="padding: 16px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #28a745;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 8px;">🗺️ Magia Territorial</div>
+            <div style="font-size: 20px; font-weight: 700; color: #28a745;">{{ ficha.per_magia_territorial }}/5</div>
+        </div>
+    </div>
+</div>
+
+<!-- HISTÓRIA -->
+{% if ficha.historia %}
+<div class="card" style="margin-top: 30px;">
+    <div class="card-header">
+        <h3>📚 História do Personagem</h3>
+    </div>
+    <div style="line-height: 1.8; color: #495057; font-size: 15px; white-space: pre-wrap; background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;">
+        {{ ficha.historia }}
+    </div>
+</div>
+{% endif %}
+
+<!-- INFORMAÇÕES DO SISTEMA -->
+<div class="card" style="margin-top: 30px;">
+    <div class="card-header">
+        <h3>📊 Informações do Sistema</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ID DA FICHA</div>
+            <div style="font-size: 20px; font-weight: 700; color: #2c3e50;">#{{ ficha.id }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">CRIADA EM</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ ficha.criado_em.split('.')[0] if ficha.criado_em else 'N/A' }}</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #f8f9fa; border-radius: 10px;">
+            <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">ÚLTIMA ATUALIZAÇÃO</div>
+            <div style="font-size: 14px; font-weight: 600; color: #495057;">{{ ficha.atualizado_em.split('.')[0] if ficha.atualizado_em else 'N/A' }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dados da ficha
+    const fichaId = {{ ficha.id }};
+    const statusMaximos = {
+        vida: {{ ficha.vida_maxima }},
+        mana: {{ ficha.mana_maxima }},
+        vigor: {{ ficha.vigor_maximo }},
+        sanidade: {{ ficha.sanidade_maxima }}
+    };
+    
+    // Configurar todos os status
+    ['vida', 'mana', 'vigor', 'sanidade'].forEach(status => {
+        const slider = document.getElementById(status + '-slider');
+        const input = document.getElementById(status + '-input');
+        const display = document.getElementById(status + '-display');
+        const bar = document.getElementById(status + '-bar');
+        
+        function atualizarBarra(valor) {
+            const percentual = (valor / statusMaximos[status]) * 100;
+            bar.style.width = percentual + '%';
+            display.textContent = valor + '/' + statusMaximos[status];
+        }
+        
+        function sincronizar() {
+            const valor = parseInt(slider.value);
+            input.value = valor;
+            atualizarBarra(valor);
+            
+            // Salvar no servidor
+            fetch('/api/atualizar_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ficha_id: fichaId,
+                    campo: status + '_atual',
+                    valor: valor
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  if (!data.success) {
+                      console.error('Erro ao salvar:', data.error);
+                  }
+              });
+        }
+        
+        slider.addEventListener('input', sincronizar);
+        input.addEventListener('input', function() {
+            const valor = Math.max(0, Math.min(statusMaximos[status], parseInt(this.value) || 0));
+            this.value = valor;
+            slider.value = valor;
+            sincronizar();
+        });
+        
+        // Inicializar barra
+        atualizarBarra(parseInt(slider.value));
+    });
+    
+    // Funções de ações rápidas
+    function restaurarStatus(status) {
+        const slider = document.getElementById(status + '-slider');
+        slider.value = statusMaximos[status];
+        slider.dispatchEvent(new Event('input'));
+        
+        // Feedback visual
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '✅ Restaurado!';
+        button.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.transform = 'scale(1)';
+        }, 1000);
+    }
+    
+    function descansoCompleto() {
+        ['vida', 'mana', 'vigor', 'sanidade'].forEach(status => {
+            const slider = document.getElementById(status + '-slider');
+            slider.value = statusMaximos[status];
+            slider.dispatchEvent(new Event('input'));
+        });
+        
+        // Feedback visual
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '✅ Descanso Completo!';
+        button.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.transform = 'scale(1)';
+        }, 1500);
+    }
+    
+    // Adicionar efeitos hover nos sliders
+    document.querySelectorAll('input[type="range"]').forEach(slider => {
+        slider.addEventListener('mouseenter', function() {
+            this.style.transform = 'scaleY(1.2)';
+        });
+        
+        slider.addEventListener('mouseleave', function() {
+            this.style.transform = 'scaleY(1)';
+        });
+    });
+    
+    // Adicionar efeitos nos números de input
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.style.borderColor = '#667eea';
+            this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.style.borderColor = '#e9ecef';
+            this.style.boxShadow = 'none';
+        });
+    });
+</script>
+{% endblock %}
