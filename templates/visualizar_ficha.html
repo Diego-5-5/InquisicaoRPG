@@ -29,11 +29,31 @@
     <div class="card-header">
         <h3>🎯 Roda de Habilidades</h3>
         <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
-            Selecione até 4 habilidades para usar em combate
+            Selecione até 4 habilidades para usar em combate + 1 habilidade de classe
         </p>
     </div>
     
     <form method="POST" action="{{ url_for('atualizar_roda_habilidades', ficha_id=ficha.id) }}">
+        <!-- HABILIDADE DE CLASSE (DESTAQUE) -->
+        <div style="background: linear-gradient(135deg, #fff3cd, #ffeaa7); padding: 20px; border-radius: 12px; border: 2px solid #ffc107; margin-bottom: 25px;">
+            <label for="habilidade_classe" style="font-weight: 700; color: #856404; margin-bottom: 15px; display: block; font-size: 16px;">
+                ⭐ Habilidade de Classe
+            </label>
+            <select name="habilidade_classe" id="habilidade_classe" style="width: 100%; padding: 12px; border: 2px solid #ffc107; border-radius: 8px; font-size: 15px; background: white;">
+                <option value="">Nenhuma habilidade de classe</option>
+                {% for habilidade in todas_habilidades %}
+                    <option value="{{ habilidade.id }}" 
+                        {% if ficha.habilidade_classe == habilidade.id %}selected{% endif %}>
+                        {{ habilidade.nome }} (Nível {{ habilidade.nivel }})
+                    </option>
+                {% endfor %}
+            </select>
+            <p style="margin-top: 10px; font-size: 13px; color: #856404; font-style: italic;">
+                💡 Habilidade especial baseada na sua classe de personagem
+            </p>
+        </div>
+        
+        <!-- SLOTS NORMAIS -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
             {% for i in range(1, 5) %}
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 2px solid #e9ecef;">
@@ -61,49 +81,102 @@
     </form>
     
     <!-- Exibir habilidades selecionadas -->
-    {% if habilidades_roda %}
+    {% if habilidade_classe or habilidades_roda %}
         <div style="margin-top: 30px; border-top: 2px solid #e9ecef; padding-top: 20px;">
             <h4 style="margin-bottom: 20px; color: #495057;">⚡ Habilidades Ativas</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                {% for habilidade in habilidades_roda %}
-                    <div style="background: linear-gradient(135deg, #fff, #f8f9fa); padding: 20px; border-radius: 12px; border: 2px solid #667eea; position: relative;">
+            
+            <!-- HABILIDADE DE CLASSE SELECIONADA -->
+            {% if habilidade_classe %}
+                <div style="margin-bottom: 25px;">
+                    <h5 style="color: #856404; margin-bottom: 15px; font-size: 1.1rem;">⭐ Habilidade de Classe</h5>
+                    <div style="background: linear-gradient(135deg, #fff, #fffbf0); padding: 20px; border-radius: 12px; border: 3px solid #ffc107; position: relative;">
                         <!-- Badge de nível -->
-                        <div style="position: absolute; top: 12px; right: 12px; background: #667eea; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                            Nível {{ habilidade.nivel }}
+                        <div style="position: absolute; top: 12px; right: 12px; background: #ffc107; color: #856404; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;">
+                            Nível {{ habilidade_classe.nivel }}
                         </div>
                         
-                        <h5 style="color: #2c3e50; margin-bottom: 12px; font-size: 1.2rem;">{{ habilidade.nome }}</h5>
+                        <h5 style="color: #2c3e50; margin-bottom: 12px; font-size: 1.3rem; font-weight: 700;">{{ habilidade_classe.nome }}</h5>
                         
                         <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                             <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
-                                {{ habilidade.tipo_fisico_magico }}
+                                {{ habilidade_classe.tipo_fisico_magico }}
                             </span>
                             <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
-                                {{ habilidade.tipo_ativacao }}
+                                {{ habilidade_classe.tipo_ativacao }}
                             </span>
                             <span style="background: #e8f5e8; color: #388e3c; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
-                                {{ habilidade.tipo_habilidade }}
+                                {{ habilidade_classe.tipo_habilidade }}
+                            </span>
+                            <span style="background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                                ⭐ CLASSE
                             </span>
                         </div>
                         
                         <div style="color: #6c757d; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
-                            {{ habilidade.efeito }}
+                            {{ habilidade_classe.efeito }}
                         </div>
                         
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; font-size: 12px;">
-                            {% if habilidade.custo %}
-                                <div><strong>Custo:</strong> {{ habilidade.custo }}</div>
+                            {% if habilidade_classe.custo %}
+                                <div><strong>Custo:</strong> {{ habilidade_classe.custo }}</div>
                             {% endif %}
-                            {% if habilidade.alcance %}
-                                <div><strong>Alcance:</strong> {{ habilidade.alcance }}</div>
+                            {% if habilidade_classe.alcance %}
+                                <div><strong>Alcance:</strong> {{ habilidade_classe.alcance }}</div>
                             {% endif %}
-                            {% if habilidade.dt_atributo %}
-                                <div><strong>DT:</strong> {{ habilidade.dt_atributo }}</div>
+                            {% if habilidade_classe.dt_atributo %}
+                                <div><strong>DT:</strong> {{ habilidade_classe.dt_atributo }}</div>
                             {% endif %}
                         </div>
                     </div>
-                {% endfor %}
-            </div>
+                </div>
+            {% endif %}
+            
+            <!-- HABILIDADES DOS SLOTS -->
+            {% if habilidades_roda %}
+                <div>
+                    <h5 style="color: #495057; margin-bottom: 15px; font-size: 1.1rem;">🎲 Slots de Combate</h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        {% for habilidade in habilidades_roda %}
+                            <div style="background: linear-gradient(135deg, #fff, #f8f9fa); padding: 20px; border-radius: 12px; border: 2px solid #667eea; position: relative;">
+                                <!-- Badge de nível -->
+                                <div style="position: absolute; top: 12px; right: 12px; background: #667eea; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                    Nível {{ habilidade.nivel }}
+                                </div>
+                                
+                                <h5 style="color: #2c3e50; margin-bottom: 12px; font-size: 1.2rem;">{{ habilidade.nome }}</h5>
+                                
+                                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                                    <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                        {{ habilidade.tipo_fisico_magico }}
+                                    </span>
+                                    <span style="background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                        {{ habilidade.tipo_ativacao }}
+                                    </span>
+                                    <span style="background: #e8f5e8; color: #388e3c; padding: 4px 8px; border-radius: 8px; font-size: 12px;">
+                                        {{ habilidade.tipo_habilidade }}
+                                    </span>
+                                </div>
+                                
+                                <div style="color: #6c757d; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                                    {{ habilidade.efeito }}
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; font-size: 12px;">
+                                    {% if habilidade.custo %}
+                                        <div><strong>Custo:</strong> {{ habilidade.custo }}</div>
+                                    {% endif %}
+                                    {% if habilidade.alcance %}
+                                        <div><strong>Alcance:</strong> {{ habilidade.alcance }}</div>
+                                    {% endif %}
+                                    {% if habilidade.dt_atributo %}
+                                        <div><strong>DT:</strong> {{ habilidade.dt_atributo }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 </div>

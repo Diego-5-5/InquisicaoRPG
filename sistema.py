@@ -94,6 +94,7 @@ def init_db():
             habilidade_slot_2 INTEGER,
             habilidade_slot_3 INTEGER,
             habilidade_slot_4 INTEGER,
+            habilidade_classe INTEGER,
             
             -- METADADOS
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -138,6 +139,34 @@ def init_db():
     conn.commit()
     conn.close()
     print("✅ Banco de dados inicializado com sucesso!")
+
+def atualizar_banco_habilidade_classe():
+    """Adiciona o campo habilidade_classe na tabela fichas se não existir"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar se a coluna já existe
+        cursor.execute("PRAGMA table_info(fichas)")
+        colunas = [coluna[1] for coluna in cursor.fetchall()]
+        
+        if 'habilidade_classe' not in colunas:
+            # Adicionar a nova coluna
+            cursor.execute('''
+                ALTER TABLE fichas 
+                ADD COLUMN habilidade_classe INTEGER
+            ''')
+            print("✅ Coluna 'habilidade_classe' adicionada com sucesso!")
+        else:
+            print("ℹ️ Coluna 'habilidade_classe' já existe.")
+        
+        conn.commit()
+        
+    except Exception as e:
+        print(f"❌ Erro ao atualizar banco: {e}")
+    
+    finally:
+        conn.close()
 
 def get_db_connection():
     """Retorna uma conexão com o banco de dados"""
@@ -289,7 +318,7 @@ def visualizar_ficha(ficha_id):
             flash('Ficha não encontrada!', 'error')
             return redirect(url_for('index'))
         
-        # Buscar habilidades da roda de habilidades
+        # Buscar habilidades da roda de habilidades (incluindo habilidade de classe)
         habilidades_roda = []
         for slot in ['habilidade_slot_1', 'habilidade_slot_2', 'habilidade_slot_3', 'habilidade_slot_4']:
             habilidade_id = ficha[slot]
@@ -298,10 +327,19 @@ def visualizar_ficha(ficha_id):
                 if habilidade:
                     habilidades_roda.append(habilidade)
         
+        # Buscar habilidade de classe
+        habilidade_classe = None
+        if ficha['habilidade_classe']:
+            habilidade_classe = conn.execute('SELECT * FROM habilidades WHERE id = ?', (ficha['habilidade_classe'],)).fetchone()
+        
         # Buscar todas as habilidades do personagem para seleção
         todas_habilidades = conn.execute('SELECT * FROM habilidades WHERE ficha_id = ? ORDER BY nome', (ficha_id,)).fetchall()
         
-        return render_template('visualizar_ficha.html', ficha=ficha, habilidades_roda=habilidades_roda, todas_habilidades=todas_habilidades)
+        return render_template('visualizar_ficha.html', 
+                             ficha=ficha, 
+                             habilidades_roda=habilidades_roda, 
+                             habilidade_classe=habilidade_classe,
+                             todas_habilidades=todas_habilidades)
         
     except Exception as e:
         print(f"Erro ao visualizar ficha: {e}")
@@ -684,15 +722,16 @@ def deletar_habilidade(habilidade_id):
         
         ficha_id = habilidade['ficha_id']
         
-        # Remover habilidade dos slots da roda de habilidades
+        # Remover habilidade dos slots da roda de habilidades (incluindo habilidade de classe)
         cursor.execute('''
             UPDATE fichas SET
                 habilidade_slot_1 = CASE WHEN habilidade_slot_1 = ? THEN NULL ELSE habilidade_slot_1 END,
                 habilidade_slot_2 = CASE WHEN habilidade_slot_2 = ? THEN NULL ELSE habilidade_slot_2 END,
                 habilidade_slot_3 = CASE WHEN habilidade_slot_3 = ? THEN NULL ELSE habilidade_slot_3 END,
-                habilidade_slot_4 = CASE WHEN habilidade_slot_4 = ? THEN NULL ELSE habilidade_slot_4 END
+                habilidade_slot_4 = CASE WHEN habilidade_slot_4 = ? THEN NULL ELSE habilidade_slot_4 END,
+                habilidade_classe = CASE WHEN habilidade_classe = ? THEN NULL ELSE habilidade_classe END
             WHERE id = ?
-        ''', (habilidade_id, habilidade_id, habilidade_id, habilidade_id, ficha_id))
+        ''', (habilidade_id, habilidade_id, habilidade_id, habilidade_id, habilidade_id, ficha_id))
         
         # Deletar a habilidade
         cursor.execute('DELETE FROM habilidades WHERE id = ?', (habilidade_id,))
@@ -728,6 +767,7 @@ def atualizar_roda_habilidades(ficha_id):
                 habilidade_slot_2 = ?,
                 habilidade_slot_3 = ?,
                 habilidade_slot_4 = ?,
+                habilidade_classe = ?,
                 atualizado_em = CURRENT_TIMESTAMP
             WHERE id = ?
         ''', (
@@ -735,6 +775,7 @@ def atualizar_roda_habilidades(ficha_id):
             get_habilidade_id('habilidade_slot_2'),
             get_habilidade_id('habilidade_slot_3'),
             get_habilidade_id('habilidade_slot_4'),
+            get_habilidade_id('habilidade_classe'),
             ficha_id
         ))
         
@@ -834,11 +875,14 @@ if __name__ == '__main__':
     print("🔧 Inicializando banco de dados...")
     init_db()
     
+    # Atualizar banco para adicionar habilidade de classe
+    print("🔄 Atualizando banco para habilidade de classe...")
+    atualizar_banco_habilidade_classe()
+    
     # Roda a aplicação
     print("🚀 Iniciando servidor Flask...")
-print("🌐 Acesse: http://127.0.0.1:5000")
-
-if __name__ == '__main__':
+    print("🌐 Acesse: http://127.0.0.1:5000")
+    
     import os
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
