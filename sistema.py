@@ -1,178 +1,205 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta_aqui_muito_segura_2024'
+app.secret_key = os.environ.get('SECRET_KEY', 'sua_chave_secreta_aqui_muito_segura_2024')
 
 # Configuração do banco de dados
-DATABASE = 'rpg_fichas.db'
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://bd_inquisicao_user:B4T9wng7PUQkp8xuA6EU8GM2AW9vVqqV@dpg-d28lg0euk2gs73fg0te0-a.oregon-postgres.render.com/bd_inquisicao')
+
+def get_db_connection():
+    """Retorna uma conexão com o banco PostgreSQL"""
+    try:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        return conn
+    except Exception as e:
+        print(f"Erro ao conectar ao banco: {e}")
+        raise
 
 def init_db():
     """Inicializa o banco de dados com as tabelas necessárias"""
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    
-    # Tabela de fichas (existente)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS fichas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            
-            -- INFORMAÇÕES BÁSICAS
-            nome TEXT NOT NULL,
-            tipo_corpo TEXT NOT NULL,
-            classe TEXT NOT NULL,
-            categoria TEXT NOT NULL,
-            historia TEXT,
-            elemento TEXT NOT NULL,
-            ouro INTEGER DEFAULT 0,
-            
-            -- STATUS
-            vida_atual INTEGER DEFAULT 10,
-            vida_maxima INTEGER DEFAULT 10,
-            mana_atual INTEGER DEFAULT 10,
-            mana_maxima INTEGER DEFAULT 10,
-            vigor_atual INTEGER DEFAULT 10,
-            vigor_maximo INTEGER DEFAULT 10,
-            sanidade_atual INTEGER DEFAULT 100,
-            sanidade_maxima INTEGER DEFAULT 100,
-            deslocamento INTEGER DEFAULT 0,
-            resistencia INTEGER DEFAULT 5,
-            armadura_fisica INTEGER DEFAULT 0,
-            armadura_magica INTEGER DEFAULT 0,
-            
-            -- ATRIBUTOS
-            forca INTEGER DEFAULT 0,
-            destreza INTEGER DEFAULT 0,
-            magia INTEGER DEFAULT 0,
-            constituicao INTEGER DEFAULT 0,
-            agilidade INTEGER DEFAULT 0,
-            sabedoria INTEGER DEFAULT 0,
-            carisma INTEGER DEFAULT 0,
-            fe INTEGER DEFAULT 0,
-            
-            -- EQUIPAMENTOS
-            armadura TEXT,
-            arma TEXT,
-            complemento TEXT,
-            amuleto1 TEXT,
-            amuleto2 TEXT,
-            
-            -- PROFICIÊNCIAS (0-5)
-            prof_sobrevivencia INTEGER DEFAULT 0,
-            prof_botanica INTEGER DEFAULT 0,
-            prof_culinaria INTEGER DEFAULT 0,
-            prof_religiao INTEGER DEFAULT 0,
-            prof_pescaria INTEGER DEFAULT 0,
-            prof_ferraria INTEGER DEFAULT 0,
-            prof_artesanato INTEGER DEFAULT 0,
-            prof_mixologia INTEGER DEFAULT 0,
-            prof_musica INTEGER DEFAULT 0,
-            prof_jogos_azar INTEGER DEFAULT 0,
-            prof_rataria INTEGER DEFAULT 0,
-            prof_navegacao INTEGER DEFAULT 0,
-            prof_sacratismo INTEGER DEFAULT 0,
-            prof_demonologia INTEGER DEFAULT 0,
-            prof_guerra INTEGER DEFAULT 0,
-            prof_acrobacia INTEGER DEFAULT 0,
-            prof_combate_desarmado INTEGER DEFAULT 0,
-            prof_armas_leves INTEGER DEFAULT 0,
-            prof_armas_pesadas INTEGER DEFAULT 0,
-            prof_armas_longa_distancia INTEGER DEFAULT 0,
-            prof_arremesso INTEGER DEFAULT 0,
-            
-            -- PERÍCIAS MÁGICAS (0-5)
-            per_maguslogia INTEGER DEFAULT 0,
-            per_magia_elemental INTEGER DEFAULT 0,
-            per_magia_obscura INTEGER DEFAULT 0,
-            per_magia_estimulo INTEGER DEFAULT 0,
-            per_magia_territorial INTEGER DEFAULT 0,
-            
-            -- RODA DE HABILIDADES
-            habilidade_slot_1 INTEGER,
-            habilidade_slot_2 INTEGER,
-            habilidade_slot_3 INTEGER,
-            habilidade_slot_4 INTEGER,
-            habilidade_classe INTEGER,
-            
-            -- METADADOS
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Tabela de habilidades
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS habilidades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ficha_id INTEGER NOT NULL,
-            
-            -- ESTRUTURA BÁSICA
-            nome TEXT NOT NULL,
-            nivel INTEGER NOT NULL CHECK(nivel >= 1 AND nivel <= 4),
-            tipo_fisico_magico TEXT NOT NULL CHECK(tipo_fisico_magico IN ('FISICO', 'MAGICO')),
-            tipo_ativacao TEXT NOT NULL CHECK(tipo_ativacao IN ('PASSIVA', 'ATIVA')),
-            tipo_habilidade TEXT NOT NULL CHECK(tipo_habilidade IN ('Ataque', 'Defesa', 'Suporte', 'Terreno')),
-            
-            -- MECÂNICAS
-            proficiencia TEXT NOT NULL,
-            efeito TEXT NOT NULL,
-            descricao TEXT NOT NULL,
-            custo TEXT DEFAULT '',
-            dt_atributo TEXT DEFAULT '',
-            alcance TEXT DEFAULT '',
-            
-            -- ESPECÍFICO PARA MAGIAS
-            eh_magia BOOLEAN DEFAULT 0,
-            conjuracao TEXT DEFAULT '',
-            elemento_magico TEXT DEFAULT '',
-            
-            -- METADADOS
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            
-            FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
-        )
-    ''')
-    
-    # Tabela de inventário
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS inventario (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ficha_id INTEGER NOT NULL,
-            
-            -- INFORMAÇÕES DO ITEM
-            nome TEXT NOT NULL,
-            descricao TEXT NOT NULL,
-            categoria TEXT DEFAULT 'Geral',
-            quantidade INTEGER DEFAULT 1,
-            peso REAL DEFAULT 0.0,
-            valor INTEGER DEFAULT 0,
-            
-            -- METADADOS
-            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            
-            FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    print("✅ Banco de dados inicializado com sucesso!")
-
-def atualizar_banco_habilidade_classe():
-    """Adiciona o campo habilidade_classe na tabela fichas se não existir"""
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Verificar se a coluna já existe
-        cursor.execute("PRAGMA table_info(fichas)")
-        colunas = [coluna[1] for coluna in cursor.fetchall()]
+        # Tabela de fichas (adaptada para PostgreSQL)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS fichas (
+                id SERIAL PRIMARY KEY,
+                
+                -- INFORMAÇÕES BÁSICAS
+                nome TEXT NOT NULL,
+                tipo_corpo TEXT NOT NULL,
+                classe TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                historia TEXT,
+                elemento TEXT NOT NULL,
+                ouro INTEGER DEFAULT 0,
+                
+                -- STATUS
+                vida_atual INTEGER DEFAULT 10,
+                vida_maxima INTEGER DEFAULT 10,
+                mana_atual INTEGER DEFAULT 10,
+                mana_maxima INTEGER DEFAULT 10,
+                vigor_atual INTEGER DEFAULT 10,
+                vigor_maximo INTEGER DEFAULT 10,
+                sanidade_atual INTEGER DEFAULT 100,
+                sanidade_maxima INTEGER DEFAULT 100,
+                deslocamento INTEGER DEFAULT 0,
+                resistencia INTEGER DEFAULT 5,
+                armadura_fisica INTEGER DEFAULT 0,
+                armadura_magica INTEGER DEFAULT 0,
+                
+                -- ATRIBUTOS
+                forca INTEGER DEFAULT 0,
+                destreza INTEGER DEFAULT 0,
+                magia INTEGER DEFAULT 0,
+                constituicao INTEGER DEFAULT 0,
+                agilidade INTEGER DEFAULT 0,
+                sabedoria INTEGER DEFAULT 0,
+                carisma INTEGER DEFAULT 0,
+                fe INTEGER DEFAULT 0,
+                
+                -- EQUIPAMENTOS
+                armadura TEXT,
+                arma TEXT,
+                complemento TEXT,
+                amuleto1 TEXT,
+                amuleto2 TEXT,
+                
+                -- PROFICIÊNCIAS (0-5)
+                prof_sobrevivencia INTEGER DEFAULT 0,
+                prof_botanica INTEGER DEFAULT 0,
+                prof_culinaria INTEGER DEFAULT 0,
+                prof_religiao INTEGER DEFAULT 0,
+                prof_pescaria INTEGER DEFAULT 0,
+                prof_ferraria INTEGER DEFAULT 0,
+                prof_artesanato INTEGER DEFAULT 0,
+                prof_mixologia INTEGER DEFAULT 0,
+                prof_musica INTEGER DEFAULT 0,
+                prof_jogos_azar INTEGER DEFAULT 0,
+                prof_rataria INTEGER DEFAULT 0,
+                prof_navegacao INTEGER DEFAULT 0,
+                prof_sacratismo INTEGER DEFAULT 0,
+                prof_demonologia INTEGER DEFAULT 0,
+                prof_guerra INTEGER DEFAULT 0,
+                prof_acrobacia INTEGER DEFAULT 0,
+                prof_combate_desarmado INTEGER DEFAULT 0,
+                prof_armas_leves INTEGER DEFAULT 0,
+                prof_armas_pesadas INTEGER DEFAULT 0,
+                prof_armas_longa_distancia INTEGER DEFAULT 0,
+                prof_arremesso INTEGER DEFAULT 0,
+                
+                -- PERÍCIAS MÁGICAS (0-5)
+                per_maguslogia INTEGER DEFAULT 0,
+                per_magia_elemental INTEGER DEFAULT 0,
+                per_magia_obscura INTEGER DEFAULT 0,
+                per_magia_estimulo INTEGER DEFAULT 0,
+                per_magia_territorial INTEGER DEFAULT 0,
+                
+                -- RODA DE HABILIDADES
+                habilidade_slot_1 INTEGER,
+                habilidade_slot_2 INTEGER,
+                habilidade_slot_3 INTEGER,
+                habilidade_slot_4 INTEGER,
+                habilidade_classe INTEGER,
+                
+                -- METADADOS
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        if 'habilidade_classe' not in colunas:
+        # Tabela de habilidades
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS habilidades (
+                id SERIAL PRIMARY KEY,
+                ficha_id INTEGER NOT NULL,
+                
+                -- ESTRUTURA BÁSICA
+                nome TEXT NOT NULL,
+                nivel INTEGER NOT NULL CHECK(nivel >= 1 AND nivel <= 4),
+                tipo_fisico_magico TEXT NOT NULL CHECK(tipo_fisico_magico IN ('FISICO', 'MAGICO')),
+                tipo_ativacao TEXT NOT NULL CHECK(tipo_ativacao IN ('PASSIVA', 'ATIVA')),
+                tipo_habilidade TEXT NOT NULL CHECK(tipo_habilidade IN ('Ataque', 'Defesa', 'Suporte', 'Terreno')),
+                
+                -- MECÂNICAS
+                proficiencia TEXT NOT NULL,
+                efeito TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                custo TEXT DEFAULT '',
+                dt_atributo TEXT DEFAULT '',
+                alcance TEXT DEFAULT '',
+                
+                -- ESPECÍFICO PARA MAGIAS
+                eh_magia BOOLEAN DEFAULT FALSE,
+                conjuracao TEXT DEFAULT '',
+                elemento_magico TEXT DEFAULT '',
+                
+                -- METADADOS
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Tabela de inventário
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS inventario (
+                id SERIAL PRIMARY KEY,
+                ficha_id INTEGER NOT NULL,
+                
+                -- INFORMAÇÕES DO ITEM
+                nome TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                categoria TEXT DEFAULT 'Geral',
+                quantidade INTEGER DEFAULT 1,
+                peso DECIMAL(10,2) DEFAULT 0.0,
+                valor INTEGER DEFAULT 0,
+                
+                -- METADADOS
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                
+                FOREIGN KEY (ficha_id) REFERENCES fichas(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Criar índices para melhor performance
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_habilidades_ficha_id ON habilidades(ficha_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_inventario_ficha_id ON inventario(ficha_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_inventario_categoria ON inventario(categoria)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_inventario_nome ON inventario(nome)")
+        
+        conn.commit()
+        print("✅ Banco PostgreSQL inicializado com sucesso!")
+        
+    except Exception as e:
+        print(f"❌ Erro ao inicializar banco: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
+
+def atualizar_banco_habilidade_classe():
+    """Adiciona o campo habilidade_classe na tabela fichas se não existir"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar se a coluna já existe (PostgreSQL)
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='fichas' AND column_name='habilidade_classe'
+        """)
+        coluna_existe = cursor.fetchone()
+        
+        if not coluna_existe:
             # Adicionar a nova coluna
             cursor.execute('''
                 ALTER TABLE fichas 
@@ -186,25 +213,30 @@ def atualizar_banco_habilidade_classe():
         
     except Exception as e:
         print(f"❌ Erro ao atualizar banco: {e}")
-    
+        conn.rollback()
     finally:
+        cursor.close()
         conn.close()
 
 def atualizar_banco_inventario():
     """Adiciona a tabela de inventário se não existir"""
-    conn = sqlite3.connect(DATABASE)
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Verificar se a tabela já existe
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventario'")
+        # Verificar se a tabela já existe (PostgreSQL)
+        cursor.execute("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema='public' AND table_name='inventario'
+        """)
         tabela_existe = cursor.fetchone()
         
         if not tabela_existe:
             # Criar a tabela de inventário
             cursor.execute('''
                 CREATE TABLE inventario (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     ficha_id INTEGER NOT NULL,
                     
                     -- INFORMAÇÕES DO ITEM
@@ -212,7 +244,7 @@ def atualizar_banco_inventario():
                     descricao TEXT NOT NULL,
                     categoria TEXT DEFAULT 'Geral',
                     quantidade INTEGER DEFAULT 1,
-                    peso REAL DEFAULT 0.0,
+                    peso DECIMAL(10,2) DEFAULT 0.0,
                     valor INTEGER DEFAULT 0,
                     
                     -- METADADOS
@@ -235,23 +267,28 @@ def atualizar_banco_inventario():
         
     except Exception as e:
         print(f"❌ Erro ao atualizar banco para inventário: {e}")
-    
+        conn.rollback()
     finally:
+        cursor.close()
         conn.close()
-
-def get_db_connection():
-    """Retorna uma conexão com o banco de dados"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 @app.route('/')
 def index():
     """Página inicial com lista de fichas"""
     conn = get_db_connection()
-    fichas = conn.execute('SELECT * FROM fichas ORDER BY nome').fetchall()
-    conn.close()
-    return render_template('index.html', fichas=fichas)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT * FROM fichas ORDER BY nome')
+        fichas = cursor.fetchall()
+        return render_template('index.html', fichas=fichas)
+    except Exception as e:
+        print(f"Erro ao buscar fichas: {e}")
+        flash('Erro ao carregar fichas', 'error')
+        return render_template('index.html', fichas=[])
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/criar_ficha')
 def criar_ficha():
@@ -303,7 +340,7 @@ def salvar_ficha():
                 prof_acrobacia, prof_combate_desarmado, prof_armas_leves, prof_armas_pesadas,
                 prof_armas_longa_distancia, prof_arremesso,
                 per_maguslogia, per_magia_elemental, per_magia_obscura, per_magia_estimulo, per_magia_territorial
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         ''', (
             get_safe_text('nome'),
             get_safe_text('tipo_corpo'),
@@ -365,6 +402,7 @@ def salvar_ficha():
             get_safe_value('per_magia_territorial', 0)
         ))
         
+        ficha_id = cursor.fetchone()[0]
         conn.commit()
         flash('Ficha criada com sucesso!', 'success')
         return redirect(url_for('index'))
@@ -372,18 +410,21 @@ def salvar_ficha():
     except Exception as e:
         print(f"Erro detalhado: {e}")
         flash(f'Erro ao criar ficha: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('criar_ficha'))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/visualizar_ficha/<int:ficha_id>')
 def visualizar_ficha(ficha_id):
     """Visualiza uma ficha específica"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -394,27 +435,31 @@ def visualizar_ficha(ficha_id):
         for slot in ['habilidade_slot_1', 'habilidade_slot_2', 'habilidade_slot_3', 'habilidade_slot_4']:
             habilidade_id = ficha[slot]
             if habilidade_id:
-                habilidade = conn.execute('SELECT * FROM habilidades WHERE id = ?', (habilidade_id,)).fetchone()
+                cursor.execute('SELECT * FROM habilidades WHERE id = %s', (habilidade_id,))
+                habilidade = cursor.fetchone()
                 if habilidade:
                     habilidades_roda.append(habilidade)
         
         # Buscar habilidade de classe
         habilidade_classe = None
         if ficha['habilidade_classe']:
-            habilidade_classe = conn.execute('SELECT * FROM habilidades WHERE id = ?', (ficha['habilidade_classe'],)).fetchone()
+            cursor.execute('SELECT * FROM habilidades WHERE id = %s', (ficha['habilidade_classe'],))
+            habilidade_classe = cursor.fetchone()
         
         # Buscar todas as habilidades do personagem para seleção
-        todas_habilidades = conn.execute('SELECT * FROM habilidades WHERE ficha_id = ? ORDER BY nome', (ficha_id,)).fetchall()
+        cursor.execute('SELECT * FROM habilidades WHERE ficha_id = %s ORDER BY nome', (ficha_id,))
+        todas_habilidades = cursor.fetchall()
         
         # Buscar estatísticas do inventário
-        stats_inventario = conn.execute('''
+        cursor.execute('''
             SELECT 
                 COUNT(*) as total_itens,
                 COALESCE(SUM(peso * quantidade), 0) as peso_total,
                 COALESCE(SUM(valor * quantidade), 0) as valor_total
             FROM inventario 
-            WHERE ficha_id = ?
-        ''', (ficha_id,)).fetchone()
+            WHERE ficha_id = %s
+        ''', (ficha_id,))
+        stats_inventario = cursor.fetchone()
         
         return render_template('visualizar_ficha.html', 
                              ficha=ficha, 
@@ -427,17 +472,19 @@ def visualizar_ficha(ficha_id):
         print(f"Erro ao visualizar ficha: {e}")
         flash(f'Erro ao carregar ficha: {str(e)}', 'error')
         return redirect(url_for('index'))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/editar_ficha/<int:ficha_id>')
 def editar_ficha(ficha_id):
     """Página para editar uma ficha existente"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -449,8 +496,8 @@ def editar_ficha(ficha_id):
         print(f"Erro ao carregar ficha para edição: {e}")
         flash(f'Erro ao carregar ficha: {str(e)}', 'error')
         return redirect(url_for('index'))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/atualizar_ficha/<int:ficha_id>', methods=['POST'])
@@ -479,20 +526,20 @@ def atualizar_ficha(ficha_id):
         
         cursor.execute('''
             UPDATE fichas SET
-                nome = ?, tipo_corpo = ?, classe = ?, categoria = ?, historia = ?, elemento = ?, ouro = ?,
-                vida_atual = ?, vida_maxima = ?, mana_atual = ?, mana_maxima = ?,
-                vigor_atual = ?, vigor_maximo = ?, sanidade_atual = ?, sanidade_maxima = ?,
-                deslocamento = ?, resistencia = ?, armadura_fisica = ?, armadura_magica = ?,
-                forca = ?, destreza = ?, magia = ?, constituicao = ?, agilidade = ?, sabedoria = ?, carisma = ?, fe = ?,
-                armadura = ?, arma = ?, complemento = ?, amuleto1 = ?, amuleto2 = ?,
-                prof_sobrevivencia = ?, prof_botanica = ?, prof_culinaria = ?, prof_religiao = ?, prof_pescaria = ?,
-                prof_ferraria = ?, prof_artesanato = ?, prof_mixologia = ?, prof_musica = ?, prof_jogos_azar = ?,
-                prof_rataria = ?, prof_navegacao = ?, prof_sacratismo = ?, prof_demonologia = ?, prof_guerra = ?,
-                prof_acrobacia = ?, prof_combate_desarmado = ?, prof_armas_leves = ?, prof_armas_pesadas = ?,
-                prof_armas_longa_distancia = ?, prof_arremesso = ?,
-                per_maguslogia = ?, per_magia_elemental = ?, per_magia_obscura = ?, per_magia_estimulo = ?, per_magia_territorial = ?,
+                nome = %s, tipo_corpo = %s, classe = %s, categoria = %s, historia = %s, elemento = %s, ouro = %s,
+                vida_atual = %s, vida_maxima = %s, mana_atual = %s, mana_maxima = %s,
+                vigor_atual = %s, vigor_maximo = %s, sanidade_atual = %s, sanidade_maxima = %s,
+                deslocamento = %s, resistencia = %s, armadura_fisica = %s, armadura_magica = %s,
+                forca = %s, destreza = %s, magia = %s, constituicao = %s, agilidade = %s, sabedoria = %s, carisma = %s, fe = %s,
+                armadura = %s, arma = %s, complemento = %s, amuleto1 = %s, amuleto2 = %s,
+                prof_sobrevivencia = %s, prof_botanica = %s, prof_culinaria = %s, prof_religiao = %s, prof_pescaria = %s,
+                prof_ferraria = %s, prof_artesanato = %s, prof_mixologia = %s, prof_musica = %s, prof_jogos_azar = %s,
+                prof_rataria = %s, prof_navegacao = %s, prof_sacratismo = %s, prof_demonologia = %s, prof_guerra = %s,
+                prof_acrobacia = %s, prof_combate_desarmado = %s, prof_armas_leves = %s, prof_armas_pesadas = %s,
+                prof_armas_longa_distancia = %s, prof_arremesso = %s,
+                per_maguslogia = %s, per_magia_elemental = %s, per_magia_obscura = %s, per_magia_estimulo = %s, per_magia_territorial = %s,
                 atualizado_em = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         ''', (
             get_safe_text('nome'),
             get_safe_text('tipo_corpo'),
@@ -562,9 +609,10 @@ def atualizar_ficha(ficha_id):
     except Exception as e:
         print(f"Erro ao atualizar ficha: {e}")
         flash(f'Erro ao atualizar ficha: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('editar_ficha', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/deletar_ficha/<int:ficha_id>', methods=['POST'])
@@ -575,19 +623,20 @@ def deletar_ficha(ficha_id):
     
     try:
         # Deletar habilidades primeiro (por causa da foreign key)
-        cursor.execute('DELETE FROM habilidades WHERE ficha_id = ?', (ficha_id,))
+        cursor.execute('DELETE FROM habilidades WHERE ficha_id = %s', (ficha_id,))
         # Deletar itens do inventário
-        cursor.execute('DELETE FROM inventario WHERE ficha_id = ?', (ficha_id,))
+        cursor.execute('DELETE FROM inventario WHERE ficha_id = %s', (ficha_id,))
         # Deletar a ficha
-        cursor.execute('DELETE FROM fichas WHERE id = ?', (ficha_id,))
+        cursor.execute('DELETE FROM fichas WHERE id = %s', (ficha_id,))
         conn.commit()
         flash('Ficha deletada com sucesso!', 'success')
         
     except Exception as e:
         print(f"Erro ao deletar ficha: {e}")
         flash(f'Erro ao deletar ficha: {str(e)}', 'error')
-    
+        conn.rollback()
     finally:
+        cursor.close()
         conn.close()
     
     return redirect(url_for('index'))
@@ -598,16 +647,19 @@ def deletar_ficha(ficha_id):
 def gerenciar_habilidades(ficha_id):
     """Página para gerenciar habilidades de uma ficha"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
         # Buscar a ficha
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
             return redirect(url_for('index'))
         
         # Buscar todas as habilidades desta ficha
-        habilidades = conn.execute('SELECT * FROM habilidades WHERE ficha_id = ? ORDER BY nome', (ficha_id,)).fetchall()
+        cursor.execute('SELECT * FROM habilidades WHERE ficha_id = %s ORDER BY nome', (ficha_id,))
+        habilidades = cursor.fetchall()
         
         print(f"Debug: Encontradas {len(habilidades)} habilidades para ficha {ficha_id}")
         
@@ -617,17 +669,19 @@ def gerenciar_habilidades(ficha_id):
         print(f"Erro ao gerenciar habilidades: {e}")
         flash(f'Erro ao carregar habilidades: {str(e)}', 'error')
         return redirect(url_for('visualizar_ficha', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/criar_habilidade/<int:ficha_id>')
 def criar_habilidade(ficha_id):
     """Página para criar nova habilidade"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -639,8 +693,8 @@ def criar_habilidade(ficha_id):
         print(f"Erro ao carregar página criar habilidade: {e}")
         flash(f'Erro ao carregar página: {str(e)}', 'error')
         return redirect(url_for('gerenciar_habilidades', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/salvar_habilidade/<int:ficha_id>', methods=['POST'])
@@ -664,7 +718,8 @@ def salvar_habilidade(ficha_id):
     
     try:
         # Verificar se a ficha existe
-        ficha = conn.execute('SELECT id FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT id FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         if not ficha:
             flash('Ficha não encontrada!', 'error')
             return redirect(url_for('index'))
@@ -676,7 +731,7 @@ def salvar_habilidade(ficha_id):
                 ficha_id, nome, nivel, tipo_fisico_magico, tipo_ativacao, tipo_habilidade,
                 proficiencia, efeito, descricao, custo, dt_atributo, alcance,
                 eh_magia, conjuracao, elemento_magico
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         ''', (
             ficha_id,
             dados.get('nome').strip(),
@@ -695,8 +750,9 @@ def salvar_habilidade(ficha_id):
             dados.get('elemento_magico', '') if eh_magia else ''
         ))
         
+        habilidade_id = cursor.fetchone()[0]
         conn.commit()
-        print(f"Debug: Habilidade criada com sucesso! ID: {cursor.lastrowid}")
+        print(f"Debug: Habilidade criada com sucesso! ID: {habilidade_id}")
         flash('Habilidade criada com sucesso!', 'success')
         return redirect(url_for('gerenciar_habilidades', ficha_id=ficha_id))
         
@@ -705,24 +761,28 @@ def salvar_habilidade(ficha_id):
         import traceback
         traceback.print_exc()
         flash(f'Erro ao criar habilidade: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('criar_habilidade', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/editar_habilidade/<int:habilidade_id>')
 def editar_habilidade(habilidade_id):
     """Página para editar habilidade"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        habilidade = conn.execute('SELECT * FROM habilidades WHERE id = ?', (habilidade_id,)).fetchone()
+        cursor.execute('SELECT * FROM habilidades WHERE id = %s', (habilidade_id,))
+        habilidade = cursor.fetchone()
         
         if habilidade is None:
             flash('Habilidade não encontrada!', 'error')
             return redirect(url_for('index'))
         
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (habilidade['ficha_id'],)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (habilidade['ficha_id'],))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -734,8 +794,8 @@ def editar_habilidade(habilidade_id):
         print(f"Erro ao carregar habilidade para edição: {e}")
         flash(f'Erro ao carregar habilidade: {str(e)}', 'error')
         return redirect(url_for('index'))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/atualizar_habilidade/<int:habilidade_id>', methods=['POST'])
@@ -747,7 +807,8 @@ def atualizar_habilidade(habilidade_id):
     cursor = conn.cursor()
     
     try:
-        habilidade = conn.execute('SELECT ficha_id FROM habilidades WHERE id = ?', (habilidade_id,)).fetchone()
+        cursor.execute('SELECT ficha_id FROM habilidades WHERE id = %s', (habilidade_id,))
+        habilidade = cursor.fetchone()
         if not habilidade:
             flash('Habilidade não encontrada!', 'error')
             return redirect(url_for('index'))
@@ -757,10 +818,10 @@ def atualizar_habilidade(habilidade_id):
         
         cursor.execute('''
             UPDATE habilidades SET
-                nome = ?, nivel = ?, tipo_fisico_magico = ?, tipo_ativacao = ?, tipo_habilidade = ?,
-                proficiencia = ?, efeito = ?, descricao = ?, custo = ?, dt_atributo = ?, alcance = ?,
-                eh_magia = ?, conjuracao = ?, elemento_magico = ?, atualizado_em = CURRENT_TIMESTAMP
-            WHERE id = ?
+                nome = %s, nivel = %s, tipo_fisico_magico = %s, tipo_ativacao = %s, tipo_habilidade = %s,
+                proficiencia = %s, efeito = %s, descricao = %s, custo = %s, dt_atributo = %s, alcance = %s,
+                eh_magia = %s, conjuracao = %s, elemento_magico = %s, atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = %s
         ''', (
             dados.get('nome').strip(),
             int(dados.get('nivel')),
@@ -786,9 +847,10 @@ def atualizar_habilidade(habilidade_id):
     except Exception as e:
         print(f"Erro ao atualizar habilidade: {e}")
         flash(f'Erro ao atualizar habilidade: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('editar_habilidade', habilidade_id=habilidade_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/deletar_habilidade/<int:habilidade_id>', methods=['POST'])
@@ -799,7 +861,8 @@ def deletar_habilidade(habilidade_id):
     
     try:
         # Buscar ficha_id antes de deletar
-        habilidade = conn.execute('SELECT ficha_id FROM habilidades WHERE id = ?', (habilidade_id,)).fetchone()
+        cursor.execute('SELECT ficha_id FROM habilidades WHERE id = %s', (habilidade_id,))
+        habilidade = cursor.fetchone()
         if not habilidade:
             flash('Habilidade não encontrada!', 'error')
             return redirect(url_for('index'))
@@ -809,16 +872,16 @@ def deletar_habilidade(habilidade_id):
         # Remover habilidade dos slots da roda de habilidades (incluindo habilidade de classe)
         cursor.execute('''
             UPDATE fichas SET
-                habilidade_slot_1 = CASE WHEN habilidade_slot_1 = ? THEN NULL ELSE habilidade_slot_1 END,
-                habilidade_slot_2 = CASE WHEN habilidade_slot_2 = ? THEN NULL ELSE habilidade_slot_2 END,
-                habilidade_slot_3 = CASE WHEN habilidade_slot_3 = ? THEN NULL ELSE habilidade_slot_3 END,
-                habilidade_slot_4 = CASE WHEN habilidade_slot_4 = ? THEN NULL ELSE habilidade_slot_4 END,
-                habilidade_classe = CASE WHEN habilidade_classe = ? THEN NULL ELSE habilidade_classe END
-            WHERE id = ?
+                habilidade_slot_1 = CASE WHEN habilidade_slot_1 = %s THEN NULL ELSE habilidade_slot_1 END,
+                habilidade_slot_2 = CASE WHEN habilidade_slot_2 = %s THEN NULL ELSE habilidade_slot_2 END,
+                habilidade_slot_3 = CASE WHEN habilidade_slot_3 = %s THEN NULL ELSE habilidade_slot_3 END,
+                habilidade_slot_4 = CASE WHEN habilidade_slot_4 = %s THEN NULL ELSE habilidade_slot_4 END,
+                habilidade_classe = CASE WHEN habilidade_classe = %s THEN NULL ELSE habilidade_classe END
+            WHERE id = %s
         ''', (habilidade_id, habilidade_id, habilidade_id, habilidade_id, habilidade_id, ficha_id))
         
         # Deletar a habilidade
-        cursor.execute('DELETE FROM habilidades WHERE id = ?', (habilidade_id,))
+        cursor.execute('DELETE FROM habilidades WHERE id = %s', (habilidade_id,))
         conn.commit()
         flash('Habilidade deletada com sucesso!', 'success')
         return redirect(url_for('gerenciar_habilidades', ficha_id=ficha_id))
@@ -826,9 +889,10 @@ def deletar_habilidade(habilidade_id):
     except Exception as e:
         print(f"Erro ao deletar habilidade: {e}")
         flash(f'Erro ao deletar habilidade: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('gerenciar_habilidades', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/atualizar_roda_habilidades/<int:ficha_id>', methods=['POST'])
@@ -847,13 +911,13 @@ def atualizar_roda_habilidades(ficha_id):
         
         cursor.execute('''
             UPDATE fichas SET
-                habilidade_slot_1 = ?,
-                habilidade_slot_2 = ?,
-                habilidade_slot_3 = ?,
-                habilidade_slot_4 = ?,
-                habilidade_classe = ?,
+                habilidade_slot_1 = %s,
+                habilidade_slot_2 = %s,
+                habilidade_slot_3 = %s,
+                habilidade_slot_4 = %s,
+                habilidade_classe = %s,
                 atualizado_em = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         ''', (
             get_habilidade_id('habilidade_slot_1'),
             get_habilidade_id('habilidade_slot_2'),
@@ -869,8 +933,9 @@ def atualizar_roda_habilidades(ficha_id):
     except Exception as e:
         print(f"Erro ao atualizar roda de habilidades: {e}")
         flash(f'Erro ao atualizar roda de habilidades: {str(e)}', 'error')
-    
+        conn.rollback()
     finally:
+        cursor.close()
         conn.close()
     
     return redirect(url_for('visualizar_ficha', ficha_id=ficha_id))
@@ -881,24 +946,27 @@ def atualizar_roda_habilidades(ficha_id):
 def gerenciar_inventario(ficha_id):
     """Página para gerenciar inventário de uma ficha"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
         # Buscar a ficha
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
             return redirect(url_for('index'))
         
         # Buscar todos os itens do inventário
-        itens = conn.execute('''
+        cursor.execute('''
             SELECT * FROM inventario 
-            WHERE ficha_id = ? 
+            WHERE ficha_id = %s 
             ORDER BY categoria, nome
-        ''', (ficha_id,)).fetchall()
+        ''', (ficha_id,))
+        itens = cursor.fetchall()
         
         # Calcular estatísticas
         total_itens = len(itens)
-        peso_total = sum(item['peso'] * item['quantidade'] for item in itens)
+        peso_total = sum(float(item['peso']) * item['quantidade'] for item in itens)
         valor_total = sum(item['valor'] * item['quantidade'] for item in itens)
         
         estatisticas = {
@@ -916,17 +984,19 @@ def gerenciar_inventario(ficha_id):
         print(f"Erro ao gerenciar inventário: {e}")
         flash(f'Erro ao carregar inventário: {str(e)}', 'error')
         return redirect(url_for('visualizar_ficha', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/criar_item/<int:ficha_id>')
 def criar_item(ficha_id):
     """Página para criar novo item"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -938,8 +1008,8 @@ def criar_item(ficha_id):
         print(f"Erro ao carregar página criar item: {e}")
         flash(f'Erro ao carregar página: {str(e)}', 'error')
         return redirect(url_for('gerenciar_inventario', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/salvar_item/<int:ficha_id>', methods=['POST'])
@@ -957,7 +1027,8 @@ def salvar_item(ficha_id):
     
     try:
         # Verificar se a ficha existe
-        ficha = conn.execute('SELECT id FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT id FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         if not ficha:
             flash('Ficha não encontrada!', 'error')
             return redirect(url_for('index'))
@@ -979,7 +1050,7 @@ def salvar_item(ficha_id):
         cursor.execute('''
             INSERT INTO inventario (
                 ficha_id, nome, descricao, categoria, quantidade, peso, valor
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
         ''', (
             ficha_id,
             get_safe_text('nome'),
@@ -990,6 +1061,7 @@ def salvar_item(ficha_id):
             get_safe_value('valor', 0)
         ))
         
+        item_id = cursor.fetchone()[0]
         conn.commit()
         flash('Item adicionado ao inventário com sucesso!', 'success')
         return redirect(url_for('gerenciar_inventario', ficha_id=ficha_id))
@@ -997,24 +1069,28 @@ def salvar_item(ficha_id):
     except Exception as e:
         print(f"Erro ao criar item: {e}")
         flash(f'Erro ao criar item: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('criar_item', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/editar_item/<int:item_id>')
 def editar_item(item_id):
     """Página para editar item"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        item = conn.execute('SELECT * FROM inventario WHERE id = ?', (item_id,)).fetchone()
+        cursor.execute('SELECT * FROM inventario WHERE id = %s', (item_id,))
+        item = cursor.fetchone()
         
         if item is None:
             flash('Item não encontrado!', 'error')
             return redirect(url_for('index'))
         
-        ficha = conn.execute('SELECT * FROM fichas WHERE id = ?', (item['ficha_id'],)).fetchone()
+        cursor.execute('SELECT * FROM fichas WHERE id = %s', (item['ficha_id'],))
+        ficha = cursor.fetchone()
         
         if ficha is None:
             flash('Ficha não encontrada!', 'error')
@@ -1026,8 +1102,8 @@ def editar_item(item_id):
         print(f"Erro ao carregar item para edição: {e}")
         flash(f'Erro ao carregar item: {str(e)}', 'error')
         return redirect(url_for('index'))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/atualizar_item/<int:item_id>', methods=['POST'])
@@ -1039,7 +1115,8 @@ def atualizar_item(item_id):
     cursor = conn.cursor()
     
     try:
-        item = conn.execute('SELECT ficha_id FROM inventario WHERE id = ?', (item_id,)).fetchone()
+        cursor.execute('SELECT ficha_id FROM inventario WHERE id = %s', (item_id,))
+        item = cursor.fetchone()
         if not item:
             flash('Item não encontrado!', 'error')
             return redirect(url_for('index'))
@@ -1062,9 +1139,9 @@ def atualizar_item(item_id):
         
         cursor.execute('''
             UPDATE inventario SET
-                nome = ?, descricao = ?, categoria = ?, quantidade = ?, 
-                peso = ?, valor = ?, atualizado_em = CURRENT_TIMESTAMP
-            WHERE id = ?
+                nome = %s, descricao = %s, categoria = %s, quantidade = %s, 
+                peso = %s, valor = %s, atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = %s
         ''', (
             get_safe_text('nome'),
             get_safe_text('descricao'),
@@ -1082,9 +1159,10 @@ def atualizar_item(item_id):
     except Exception as e:
         print(f"Erro ao atualizar item: {e}")
         flash(f'Erro ao atualizar item: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('editar_item', item_id=item_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 @app.route('/deletar_item/<int:item_id>', methods=['POST'])
@@ -1095,7 +1173,8 @@ def deletar_item(item_id):
     
     try:
         # Buscar ficha_id antes de deletar
-        item = conn.execute('SELECT ficha_id FROM inventario WHERE id = ?', (item_id,)).fetchone()
+        cursor.execute('SELECT ficha_id FROM inventario WHERE id = %s', (item_id,))
+        item = cursor.fetchone()
         if not item:
             flash('Item não encontrado!', 'error')
             return redirect(url_for('index'))
@@ -1103,7 +1182,7 @@ def deletar_item(item_id):
         ficha_id = item['ficha_id']
         
         # Deletar o item
-        cursor.execute('DELETE FROM inventario WHERE id = ?', (item_id,))
+        cursor.execute('DELETE FROM inventario WHERE id = %s', (item_id,))
         conn.commit()
         flash('Item removido do inventário com sucesso!', 'success')
         return redirect(url_for('gerenciar_inventario', ficha_id=ficha_id))
@@ -1111,9 +1190,10 @@ def deletar_item(item_id):
     except Exception as e:
         print(f"Erro ao deletar item: {e}")
         flash(f'Erro ao deletar item: {str(e)}', 'error')
+        conn.rollback()
         return redirect(url_for('gerenciar_inventario', ficha_id=ficha_id))
-    
     finally:
+        cursor.close()
         conn.close()
 
 # === APIs ===
@@ -1141,7 +1221,7 @@ def atualizar_status():
     
     try:
         cursor.execute(
-            f'UPDATE fichas SET {campo} = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?',
+            f'UPDATE fichas SET {campo} = %s, atualizado_em = CURRENT_TIMESTAMP WHERE id = %s',
             (valor, ficha_id)
         )
         conn.commit()
@@ -1149,9 +1229,10 @@ def atualizar_status():
         
     except Exception as e:
         print(f"Erro ao atualizar status: {e}")
+        conn.rollback()
         return jsonify({'success': False, 'error': str(e)})
-    
     finally:
+        cursor.close()
         conn.close()
 
 # API para estatísticas do inventário
@@ -1159,41 +1240,46 @@ def atualizar_status():
 def api_inventario_stats(ficha_id):
     """API para obter estatísticas do inventário de uma ficha"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
         # Verificar se a ficha existe
-        ficha = conn.execute('SELECT id FROM fichas WHERE id = ?', (ficha_id,)).fetchone()
+        cursor.execute('SELECT id FROM fichas WHERE id = %s', (ficha_id,))
+        ficha = cursor.fetchone()
         if not ficha:
             return jsonify({'success': False, 'error': 'Ficha não encontrada'})
         
         # Buscar estatísticas do inventário
-        stats = conn.execute('''
+        cursor.execute('''
             SELECT 
                 COUNT(*) as total_itens,
                 COALESCE(SUM(quantidade), 0) as quantidade_total,
                 COALESCE(SUM(peso * quantidade), 0) as peso_total,
                 COALESCE(SUM(valor * quantidade), 0) as valor_total
             FROM inventario 
-            WHERE ficha_id = ?
-        ''', (ficha_id,)).fetchone()
+            WHERE ficha_id = %s
+        ''', (ficha_id,))
+        stats = cursor.fetchone()
         
         # Buscar distribuição por categoria
-        categorias = conn.execute('''
+        cursor.execute('''
             SELECT categoria, COUNT(*) as count, SUM(quantidade) as quantidade
             FROM inventario 
-            WHERE ficha_id = ? 
+            WHERE ficha_id = %s 
             GROUP BY categoria 
             ORDER BY count DESC
-        ''', (ficha_id,)).fetchall()
+        ''', (ficha_id,))
+        categorias = cursor.fetchall()
         
         # Buscar itens mais valiosos
-        itens_valiosos = conn.execute('''
+        cursor.execute('''
             SELECT nome, valor, quantidade, (valor * quantidade) as valor_total
             FROM inventario 
-            WHERE ficha_id = ? AND valor > 0
+            WHERE ficha_id = %s AND valor > 0
             ORDER BY valor_total DESC 
             LIMIT 5
-        ''', (ficha_id,)).fetchall()
+        ''', (ficha_id,))
+        itens_valiosos = cursor.fetchall()
         
         resultado = {
             'success': True,
@@ -1225,8 +1311,8 @@ def api_inventario_stats(ficha_id):
     except Exception as e:
         print(f"Erro ao buscar estatísticas do inventário: {e}")
         return jsonify({'success': False, 'error': str(e)})
-    
     finally:
+        cursor.close()
         conn.close()
 
 # API para operações rápidas no inventário
@@ -1245,21 +1331,22 @@ def api_inventario_acao():
     
     try:
         # Verificar se o item existe
-        item = conn.execute('SELECT * FROM inventario WHERE id = ?', (item_id,)).fetchone()
+        cursor.execute('SELECT * FROM inventario WHERE id = %s', (item_id,))
+        item = cursor.fetchone()
         if not item:
             return jsonify({'success': False, 'error': 'Item não encontrado'})
         
         if acao == 'aumentar_quantidade':
             nova_quantidade = item['quantidade'] + 1
             cursor.execute(
-                'UPDATE inventario SET quantidade = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?',
+                'UPDATE inventario SET quantidade = %s, atualizado_em = CURRENT_TIMESTAMP WHERE id = %s',
                 (nova_quantidade, item_id)
             )
             
         elif acao == 'diminuir_quantidade':
             nova_quantidade = max(1, item['quantidade'] - 1)  # Mínimo 1
             cursor.execute(
-                'UPDATE inventario SET quantidade = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?',
+                'UPDATE inventario SET quantidade = %s, atualizado_em = CURRENT_TIMESTAMP WHERE id = %s',
                 (nova_quantidade, item_id)
             )
             
@@ -1267,7 +1354,7 @@ def api_inventario_acao():
             quantidade = dados.get('quantidade', 1)
             quantidade = max(1, int(quantidade))  # Mínimo 1
             cursor.execute(
-                'UPDATE inventario SET quantidade = ?, atualizado_em = CURRENT_TIMESTAMP WHERE id = ?',
+                'UPDATE inventario SET quantidade = %s, atualizado_em = CURRENT_TIMESTAMP WHERE id = %s',
                 (quantidade, item_id)
             )
             
@@ -1277,7 +1364,8 @@ def api_inventario_acao():
         conn.commit()
         
         # Buscar item atualizado
-        item_atualizado = conn.execute('SELECT * FROM inventario WHERE id = ?', (item_id,)).fetchone()
+        cursor.execute('SELECT * FROM inventario WHERE id = %s', (item_id,))
+        item_atualizado = cursor.fetchone()
         
         return jsonify({
             'success': True,
@@ -1285,31 +1373,35 @@ def api_inventario_acao():
                 'id': item_atualizado['id'],
                 'nome': item_atualizado['nome'],
                 'quantidade': item_atualizado['quantidade'],
-                'peso_total': float(item_atualizado['peso'] * item_atualizado['quantidade']),
+                'peso_total': float(item_atualizado['peso']) * item_atualizado['quantidade'],
                 'valor_total': item_atualizado['valor'] * item_atualizado['quantidade']
             }
         })
         
     except Exception as e:
         print(f"Erro na ação do inventário: {e}")
+        conn.rollback()
         return jsonify({'success': False, 'error': str(e)})
-    
     finally:
+        cursor.close()
         conn.close()
 
-# Rota para debug - remover em produção
 @app.route('/debug/fichas')
 def debug_fichas():
     """Debug: Listar todas as fichas e habilidades"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
-        fichas = conn.execute('SELECT id, nome FROM fichas ORDER BY id').fetchall()
+        cursor.execute('SELECT id, nome FROM fichas ORDER BY id')
+        fichas = cursor.fetchall()
         resultado = {"fichas": []}
         
         for ficha in fichas:
-            habilidades = conn.execute('SELECT id, nome FROM habilidades WHERE ficha_id = ?', (ficha['id'],)).fetchall()
-            itens = conn.execute('SELECT id, nome FROM inventario WHERE ficha_id = ?', (ficha['id'],)).fetchall()
+            cursor.execute('SELECT id, nome FROM habilidades WHERE ficha_id = %s', (ficha['id'],))
+            habilidades = cursor.fetchall()
+            cursor.execute('SELECT id, nome FROM inventario WHERE ficha_id = %s', (ficha['id'],))
+            itens = cursor.fetchall()
             resultado["fichas"].append({
                 "id": ficha['id'],
                 "nome": ficha['nome'],
@@ -1321,8 +1413,8 @@ def debug_fichas():
         
     except Exception as e:
         return jsonify({"error": str(e)})
-    
     finally:
+        cursor.close()
         conn.close()
 
 # Tratamento de erros
@@ -1343,22 +1435,27 @@ if __name__ == '__main__':
         print("📁 Certifique-se de que todos os arquivos HTML estão na pasta 'templates'")
         exit(1)
     
-    # Inicializa o banco de dados
-    print("🔧 Inicializando banco de dados...")
-    init_db()
-    
-    # Atualizar banco para adicionar habilidade de classe
-    print("🔄 Atualizando banco para habilidade de classe...")
-    atualizar_banco_habilidade_classe()
-    
-    # Atualizar banco para inventário
-    print("🎒 Atualizando banco para sistema de inventário...")
-    atualizar_banco_inventario()
+    # Inicializar banco apenas se não estiver em produção
+    if not os.environ.get('DATABASE_URL') or 'localhost' in os.environ.get('DATABASE_URL', ''):
+        print("🔧 Modo desenvolvimento - Inicializando banco de dados...")
+        init_db()
+        atualizar_banco_habilidade_classe()
+        atualizar_banco_inventario()
+    else:
+        print("🌐 Modo produção - Tentando conectar ao banco...")
+        try:
+            # Testar conexão e criar tabelas se necessário
+            init_db()
+            print("✅ Conexão com PostgreSQL estabelecida!")
+        except Exception as e:
+            print(f"❌ Erro ao conectar ao PostgreSQL: {e}")
     
     # Roda a aplicação
-    print("🚀 Iniciando servidor Flask...")
-    print("🌐 Acesse: http://127.0.0.1:5000")
-    
-    import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    debug_mode = not os.environ.get('DATABASE_URL') or 'localhost' in os.environ.get('DATABASE_URL', '')
+    
+    print("🚀 Iniciando servidor Flask...")
+    if debug_mode:
+        print("🌐 Acesse: http://127.0.0.1:5000")
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
