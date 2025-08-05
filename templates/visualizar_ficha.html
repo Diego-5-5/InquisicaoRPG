@@ -18,6 +18,9 @@
         <a href="{{ url_for('gerenciar_habilidades', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
             ⚔️ Gerenciar Habilidades
         </a>
+        <a href="{{ url_for('gerenciar_inventario', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            🎒 Gerenciar Inventário
+        </a>
         <a href="{{ url_for('index') }}" class="btn-primary" style="text-decoration: none;">
             🏠 Voltar ao Início
         </a>
@@ -79,7 +82,6 @@
             </button>
         </div>
     </form>
-    
     <!-- Exibir habilidades selecionadas -->
     {% if habilidade_classe or habilidades_roda %}
         <div style="margin-top: 30px; border-top: 2px solid #e9ecef; padding-top: 20px;">
@@ -180,7 +182,6 @@
         </div>
     {% endif %}
 </div>
-
 <!-- STATUS PRINCIPAL COM CONTROLES INTERATIVOS -->
 <div class="card" style="margin-bottom: 30px;">
     <div class="card-header">
@@ -297,6 +298,42 @@
         <button onclick="descansoCompleto()" class="btn" style="background: linear-gradient(45deg, #17a2b8, #6610f2); border: none; cursor: pointer; padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600;">
             😴 Descanso Completo
         </button>
+    </div>
+</div>
+<!-- RESUMO DO INVENTÁRIO -->
+<div class="card" style="margin-bottom: 30px;">
+    <div class="card-header">
+        <h3>🎒 Resumo do Inventário</h3>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+        <div style="text-align: center; padding: 16px; background: #e3f2fd; border-radius: 10px; border: 2px solid #2196f3;">
+            <div style="font-size: 12px; color: #1565c0; margin-bottom: 8px; font-weight: 600;">📦 ITENS TOTAIS</div>
+            <div style="font-size: 20px; font-weight: 700; color: #0d47a1;" id="total-itens-inventario">
+                {{ stats_inventario.total_itens if stats_inventario else 0 }}
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 16px; background: #f3e5f5; border-radius: 10px; border: 2px solid #9c27b0;">
+            <div style="font-size: 12px; color: #6a1b9a; margin-bottom: 8px; font-weight: 600;">⚖️ PESO TOTAL</div>
+            <div style="font-size: 20px; font-weight: 700; color: #4a148c;" id="peso-total-inventario">
+                {{ "%.1f"|format(stats_inventario.peso_total) if stats_inventario else "0.0" }} kg
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 16px; background: #fff3e0; border-radius: 10px; border: 2px solid #ff9800;">
+            <div style="font-size: 12px; color: #e65100; margin-bottom: 8px; font-weight: 600;">💰 VALOR TOTAL</div>
+            <div style="font-size: 20px; font-weight: 700; color: #bf360c;" id="valor-total-inventario">
+                {{ stats_inventario.valor_total if stats_inventario else 0 }} moedas
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 16px; background: #e8f5e8; border-radius: 10px; border: 2px solid #4caf50;">
+            <div style="font-size: 12px; color: #2e7d32; margin-bottom: 8px; font-weight: 600;">🎒 GERENCIAR</div>
+            <a href="{{ url_for('gerenciar_inventario', ficha_id=ficha.id) }}" style="display: inline-block; background: #4caf50; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px;">
+                Ver Inventário
+            </a>
+        </div>
     </div>
 </div>
 
@@ -416,7 +453,6 @@
     </div>
 </div>
 {% endif %}
-
 <!-- PROFICIÊNCIAS -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 30px;">
     
@@ -551,7 +587,6 @@
         </div>
     </div>
 </div>
-
 <!-- HISTÓRIA -->
 {% if ficha.historia %}
 <div class="card" style="margin-top: 30px;">
@@ -629,6 +664,8 @@
                   if (!data.success) {
                       console.error('Erro ao salvar:', data.error);
                   }
+              }).catch(error => {
+                  console.error('Erro na requisição:', error);
               });
         }
         
@@ -681,10 +718,28 @@
         }, 1500);
     }
     
+    // Função para carregar estatísticas do inventário
+    function carregarEstatisticasInventario() {
+        fetch('/api/inventario_stats/' + fichaId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('total-itens-inventario').textContent = data.stats.total_itens;
+                    document.getElementById('peso-total-inventario').textContent = data.stats.peso_total.toFixed(1) + ' kg';
+                    document.getElementById('valor-total-inventario').textContent = data.stats.valor_total + ' moedas';
+                }
+            })
+            .catch(error => {
+                console.log('Aviso: Não foi possível carregar estatísticas do inventário:', error);
+                // Manter valores padrão em caso de erro
+            });
+    }
+    
     // Adicionar efeitos hover nos sliders
     document.querySelectorAll('input[type="range"]').forEach(slider => {
         slider.addEventListener('mouseenter', function() {
             this.style.transform = 'scaleY(1.2)';
+            this.style.transition = 'transform 0.2s ease';
         });
         
         slider.addEventListener('mouseleave', function() {
@@ -697,6 +752,7 @@
         input.addEventListener('focus', function() {
             this.style.borderColor = '#667eea';
             this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+            this.style.transition = 'all 0.3s ease';
         });
         
         input.addEventListener('blur', function() {
@@ -704,5 +760,261 @@
             this.style.boxShadow = 'none';
         });
     });
+    
+    // Adicionar efeitos hover nos botões
+    document.querySelectorAll('button, .btn-primary').forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.3s ease';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Adicionar efeitos hover nos cards
+    document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            this.style.transition = 'all 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.08)';
+        });
+    });
+    
+    // Função para atualizar estatísticas periodicamente
+    function atualizarEstatisticasPeriodicamente() {
+        carregarEstatisticasInventario();
+        
+        // Recarregar a cada 2 minutos
+        setTimeout(atualizarEstatisticasPeriodicamente, 120000);
+    }
+    
+    // Função para mostrar notificações
+    function mostrarNotificacao(texto, tipo = 'success') {
+        const notificacao = document.createElement('div');
+        notificacao.textContent = texto;
+        
+        const cores = {
+            success: 'linear-gradient(135deg, #28a745, #20c997)',
+            error: 'linear-gradient(135deg, #dc3545, #c82333)',
+            info: 'linear-gradient(135deg, #17a2b8, #138496)'
+        };
+        
+        notificacao.style.cssText = `
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            background: ${cores[tipo] || cores.success};
+            color: white; padding: 12px 20px; border-radius: 8px;
+            font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            max-width: 300px; font-size: 14px;
+        `;
+        
+        document.body.appendChild(notificacao);
+        
+        // Animar entrada
+        setTimeout(() => {
+            notificacao.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remover após 3 segundos
+        setTimeout(() => {
+            notificacao.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notificacao.parentNode) {
+                    notificacao.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // Event listener para teclas de atalho
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + R para restaurar todos os status
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            descansoCompleto();
+            mostrarNotificacao('⚡ Descanso completo realizado!');
+        }
+        
+        // Ctrl + I para abrir inventário
+        if (e.ctrlKey && e.key === 'i') {
+            e.preventDefault();
+            window.location.href = '/inventario/{{ ficha.id }}';
+        }
+        
+        // Ctrl + H para abrir habilidades
+        if (e.ctrlKey && e.key === 'h') {
+            e.preventDefault();
+            window.location.href = '/habilidades/{{ ficha.id }}';
+        }
+    });
+    
+    // Carregar estatísticas ao inicializar a página
+    document.addEventListener('DOMContentLoaded', function() {
+        // Carregar estatísticas do inventário
+        carregarEstatisticasInventario();
+        
+        // Iniciar atualizações periódicas
+        atualizarEstatisticasPeriodicamente();
+        
+        // Mostrar dica de atalhos (apenas uma vez)
+        if (!localStorage.getItem('atalhos_mostrados')) {
+            setTimeout(() => {
+                mostrarNotificacao('💡 Dica: Use Ctrl+R para descanso completo, Ctrl+I para inventário!', 'info');
+                localStorage.setItem('atalhos_mostrados', 'true');
+            }, 2000);
+        }
+        
+        // Adicionar indicadores visuais para os status críticos
+        verificarStatusCriticos();
+        
+        // Configurar observador para mudanças nos status
+        const statusInputs = document.querySelectorAll('[id$="-input"]');
+        statusInputs.forEach(input => {
+            input.addEventListener('change', verificarStatusCriticos);
+        });
+    });
+    
+    // Função para verificar status críticos
+    function verificarStatusCriticos() {
+        const status = ['vida', 'mana', 'vigor', 'sanidade'];
+        
+        status.forEach(s => {
+            const atual = parseInt(document.getElementById(s + '-input').value);
+            const maximo = statusMaximos[s];
+            const percentual = (atual / maximo) * 100;
+            const elemento = document.getElementById(s + '-input');
+            
+            // Remover classes existentes
+            elemento.classList.remove('status-critico', 'status-baixo', 'status-normal');
+            
+            // Adicionar classe baseada no percentual
+            if (percentual <= 10) {
+                elemento.classList.add('status-critico');
+                elemento.style.borderColor = '#dc3545';
+                elemento.style.backgroundColor = '#f8d7da';
+            } else if (percentual <= 25) {
+                elemento.classList.add('status-baixo');
+                elemento.style.borderColor = '#ffc107';
+                elemento.style.backgroundColor = '#fff3cd';
+            } else {
+                elemento.classList.add('status-normal');
+                elemento.style.borderColor = '#e9ecef';
+                elemento.style.backgroundColor = 'white';
+            }
+        });
+    }
+    
+    // Salvar posição de scroll para restaurar após atualizações
+    window.addEventListener('beforeunload', function() {
+        localStorage.setItem('scroll_position_' + fichaId, window.scrollY);
+    });
+    
+    // Restaurar posição de scroll
+    window.addEventListener('load', function() {
+        const savedPosition = localStorage.getItem('scroll_position_' + fichaId);
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition));
+        }
+    });
 </script>
+
+<style>
+/* Estilos adicionais para melhorar a experiência */
+.status-critico {
+    animation: pulse-red 2s infinite;
+}
+
+.status-baixo {
+    animation: pulse-yellow 3s infinite;
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+/* Melhorar a aparência dos sliders */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #5a6fd8;
+    transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Responsividade melhorada */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+    }
+    
+    .card {
+        padding: 16px;
+    }
+    
+    .page-title {
+        font-size: 1.8rem;
+    }
+}
+
+/* Melhorar acessibilidade */
+button:focus, .btn-primary:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+input:focus {
+    outline: none;
+}
+
+/* Adicionar indicadores visuais */
+.card-header h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: #667eea;
+    margin-right: 8px;
+    border-radius: 2px;
+}
+</style>
 {% endblock %}

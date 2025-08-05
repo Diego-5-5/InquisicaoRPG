@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Item para {{ ficha.nome }} - Sistema de Fichas RPG{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📦 Novo Item para {{ ficha.nome }}</h1>
+    <p class="page-subtitle">
+        Adicione um novo item ao inventário do seu personagem
+    </p>
+    
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('gerenciar_inventario', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            🎒 Ver Inventário
+        </a>
+        <a href="{{ url_for('visualizar_ficha', ficha_id=ficha.id) }}" class="btn-primary" style="text-decoration: none;">
+            👁️ Ver Ficha
+        </a>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('salvar_item', ficha_id=ficha.id) }}" style="max-width: 800px; margin: 0 auto;">
+    
+    <!-- INFORMAÇÕES BÁSICAS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📋 Informações do Item</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nome">Nome do Item *</label>
+                <input type="text" id="nome" name="nome" required placeholder="Ex: Espada de Ferro, Poção de Cura, Anel Mágico...">
+            </div>
+            
+            <div class="form-group">
+                <label for="categoria">Categoria</label>
+                <select id="categoria" name="categoria">
+                    <option value="Geral">📦 Geral</option>
+                    <option value="Armas">⚔️ Armas</option>
+                    <option value="Armaduras">🛡️ Armaduras</option>
+                    <option value="Consumíveis">🧪 Consumíveis</option>
+                    <option value="Ferramentas">🔧 Ferramentas</option>
+                    <option value="Tesouros">💎 Tesouros</option>
+                    <option value="Materiais">📜 Materiais</option>
+                    <option value="Livros">📚 Livros</option>
+                    <option value="Jóias">💍 Jóias</option>
+                    <option value="Roupas">👕 Roupas</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="descricao">Descrição *</label>
+            <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva o item: aparência, funcionalidade, história, propriedades especiais..."></textarea>
+        </div>
+    </div>
+
+    <!-- PROPRIEDADES -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>📊 Propriedades</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="quantidade">Quantidade</label>
+                <input type="number" id="quantidade" name="quantidade" value="1" min="1" max="9999" placeholder="Quantos itens">
+            </div>
+            
+            <div class="form-group">
+                <label for="peso">Peso (kg)</label>
+                <input type="number" id="peso" name="peso" value="0" min="0" step="0.1" placeholder="0.0">
+            </div>
+            
+            <div class="form-group">
+                <label for="valor">Valor (moedas)</label>
+                <input type="number" id="valor" name="valor" value="0" min="0" placeholder="0">
+            </div>
+        </div>
+        
+        <!-- Calculadora de valor total -->
+        <div id="calculo-total" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #28a745; display: none;">
+            <h5 style="color: #155724; margin-bottom: 10px;">💰 Cálculo Total</h5>
+            <div style="display: flex; justify-content: space-between; font-size: 14px; color: #155724;">
+                <span id="peso-total">Peso Total: 0.0 kg</span>
+                <span id="valor-total">Valor Total: 0 moedas</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW DO ITEM -->
+    <div class="card" style="margin-bottom: 30px; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+        <div class="card-header">
+            <h3>👁️ Preview do Item</h3>
+            <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+                Visualização em tempo real do item sendo criado
+            </p>
+        </div>
+        
+        <div id="preview-item" style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e9ecef;">
+            <div style="text-align: center; color: #6c757d; font-style: italic;">
+                Preencha os campos acima para ver o preview do item
+            </div>
+        </div>
+    </div>
+
+    <!-- ITENS SUGERIDOS -->
+    <div class="card" style="margin-bottom: 30px;">
+        <div class="card-header">
+            <h3>💡 Itens Sugeridos</h3>
+            <p style="color: #6c757d; margin: 8px 0 0 0; font-size: 14px;">
+                Clique em um item para preencher automaticamente
+            </p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <!-- Armas -->
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <h5 style="color: #856404; margin-bottom: 10px;">⚔️ Armas</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button type="button" onclick="preencherItem('Espada Longa', 'Armas', 'Uma espada de lâmina longa e equilibrada, ideal para combate corpo a corpo.', 1, 1.5, 50)" class="btn-sugestao">Espada Longa</button>
+                    <button type="button" onclick="preencherItem('Arco Élfico', 'Armas', 'Arco feito de madeira élfica, leve e preciso para combate à distância.', 1, 0.8, 75)" class="btn-sugestao">Arco Élfico</button>
+                    <button type="button" onclick="preencherItem('Adaga Envenenada', 'Armas', 'Pequena adaga com lâmina revestida de veneno, letal em ataques furtivos.', 1, 0.3, 35)" class="btn-sugestao">Adaga Envenenada</button>
+                </div>
+            </div>
+            
+            <!-- Armaduras -->
+            <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                <h5 style="color: #0c5460; margin-bottom: 10px;">🛡️ Armaduras</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button type="button" onclick="preencherItem('Armadura de Couro', 'Armaduras', 'Armadura leve feita de couro curtido, oferece proteção básica sem comprometer a mobilidade.', 1, 5.0, 30)" class="btn-sugestao">Armadura de Couro</button>
+                    <button type="button" onclick="preencherItem('Cota de Malha', 'Armaduras', 'Armadura de anéis metálicos entrelaçados, oferece boa proteção contra cortes.', 1, 15.0, 100)" class="btn-sugestao">Cota de Malha</button>
+                    <button type="button" onclick="preencherItem('Escudo de Ferro', 'Armaduras', 'Escudo robusto de ferro, ideal para bloquear ataques inimigos.', 1, 3.0, 25)" class="btn-sugestao">Escudo de Ferro</button>
+                </div>
+            </div>
+            
+            <!-- Consumíveis -->
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                <h5 style="color: #155724; margin-bottom: 10px;">🧪 Consumíveis</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button type="button" onclick="preencherItem('Poção de Cura', 'Consumíveis', 'Poção mágica que restaura pontos de vida quando consumida.', 3, 0.2, 15)" class="btn-sugestao">Poção de Cura</button>
+                    <button type="button" onclick="preencherItem('Ração de Viagem', 'Consumíveis', 'Alimento preservado para longas jornadas, nutritivo e duradouro.', 10, 0.5, 2)" class="btn-sugestao">Ração de Viagem</button>
+                    <button type="button" onclick="preencherItem('Pergaminho de Magia', 'Consumíveis', 'Pergaminho com uma magia inscrita, de uso único.', 1, 0.1, 25)" class="btn-sugestao">Pergaminho de Magia</button>
+                </div>
+            </div>
+            
+            <!-- Tesouros -->
+            <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #6f42c1;">
+                <h5 style="color: #6a1b9a; margin-bottom: 10px;">💎 Tesouros</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button type="button" onclick="preencherItem('Gema Preciosa', 'Tesouros', 'Uma gema rara de cor vibrante, muito valiosa para colecionadores.', 1, 0.1, 200)" class="btn-sugestao">Gema Preciosa</button>
+                    <button type="button" onclick="preencherItem('Moedas Antigas', 'Tesouros', 'Coleção de moedas de civilizações perdidas, com valor histórico.', 50, 0.01, 5)" class="btn-sugestao">Moedas Antigas</button>
+                    <button type="button" onclick="preencherItem('Relíquia Sagrada', 'Tesouros', 'Artefato religioso antigo com poderes místicos.', 1, 1.0, 500)" class="btn-sugestao">Relíquia Sagrada</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÕES DE AÇÃO -->
+    <div style="text-align: center; margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 12px;">
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary" style="font-size: 16px; padding: 16px 32px; border: none; cursor: pointer;">
+                📦 Adicionar ao Inventário
+            </button>
+            <a href="{{ url_for('gerenciar_inventario', ficha_id=ficha.id) }}" class="btn-secondary" style="font-size: 16px; padding: 16px 32px; text-decoration: none;">
+                ❌ Cancelar
+            </a>
+        </div>
+        <p style="margin-top: 16px; color: #6c757d; font-size: 14px;">
+            O item pode ser editado posteriormente
+        </p>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function preencherItem(nome, categoria, descricao, quantidade, peso, valor) {
+        document.getElementById('nome').value = nome;
+        document.getElementById('categoria').value = categoria;
+        document.getElementById('descricao').value = descricao;
+        document.getElementById('quantidade').value = quantidade;
+        document.getElementById('peso').value = peso;
+        document.getElementById('valor').value = valor;
+        
+        atualizarPreview();
+        calcularTotal();
+        
+        // Feedback visual
+        const botao = event.target;
+        const originalText = botao.textContent;
+        const originalStyle = botao.style.background;
+        
+        botao.textContent = '✅ Preenchido!';
+        botao.style.background = '#28a745';
+        botao.style.color = 'white';
+        
+        setTimeout(() => {
+            botao.textContent = originalText;
+            botao.style.background = originalStyle;
+            botao.style.color = '';
+        }, 1500);
+    }
+    
+    function calcularTotal() {
+        const quantidade = parseInt(document.getElementById('quantidade').value) || 0;
+        const peso = parseFloat(document.getElementById('peso').value) || 0;
+        const valor = parseInt(document.getElementById('valor').value) || 0;
+        
+        const pesoTotal = peso * quantidade;
+        const valorTotal = valor * quantidade;
+        
+        const calculoDiv = document.getElementById('calculo-total');
+        
+        if (quantidade > 1 && (peso > 0 || valor > 0)) {
+            calculoDiv.style.display = 'block';
+            document.getElementById('peso-total').textContent = `Peso Total: ${pesoTotal.toFixed(1)} kg`;
+            document.getElementById('valor-total').textContent = `Valor Total: ${valorTotal} moedas`;
+        } else {
+            calculoDiv.style.display = 'none';
+        }
+        
+        atualizarPreview();
+    }
+    
+    function atualizarPreview() {
+        const nome = document.getElementById('nome').value || 'Nome do Item';
+        const categoria = document.getElementById('categoria').value || 'Geral';
+        const descricao = document.getElementById('descricao').value || 'Descrição do item...';
+        const quantidade = parseInt(document.getElementById('quantidade').value) || 1;
+        const peso = parseFloat(document.getElementById('peso').value) || 0;
+        const valor = parseInt(document.getElementById('valor').value) || 0;
+        
+        const categoriaIcons = {
+            'Geral': '📦',
+            'Armas': '⚔️',
+            'Armaduras': '🛡️',
+            'Consumíveis': '🧪',
+            'Ferramentas': '🔧',
+            'Tesouros': '💎',
+            'Materiais': '📜',
+            'Livros': '📚',
+            'Jóias': '💍',
+            'Roupas': '👕'
+        };
+        
+        const preview = document.getElementById('preview-item');
+        
+        preview.innerHTML = `
+            <div style="position: relative;">
+                <!-- Badge de categoria -->
+                <div style="position: absolute; top: 0; right: 0; background: #667eea; color: white; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">
+                    ${categoriaIcons[categoria] || '📦'} ${categoria}
+                </div>
+                
+                <!-- Badge de quantidade (se > 1) -->
+                ${quantidade > 1 ? `
+                    <div style="position: absolute; top: 0; left: 0; background: #28a745; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                        ${quantidade}x
+                    </div>
+                ` : ''}
+                
+                <div style="margin-top: ${quantidade > 1 ? '40px' : '30px'};">
+                    <h3 style="font-size: 1.3rem; font-weight: 700; color: #2c3e50; margin-bottom: 15px;">
+                        ${nome}
+                    </h3>
+                    
+                    <!-- Descrição -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #667eea;">
+                        <div style="color: #495057; font-size: 14px; line-height: 1.5;">${descricao}</div>
+                    </div>
+                    
+                    <!-- Propriedades -->
+                    ${(quantidade > 1 || peso > 0 || valor > 0) ? `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 12px; margin-bottom: 15px;">
+                            <div style="background: #e9ecef; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: 600;">QUANTIDADE</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #495057;">${quantidade}</div>
+                            </div>
+                            
+                            ${peso > 0 ? `
+                                <div style="background: #f3e5f5; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 10px; color: #7b1fa2; margin-bottom: 4px; font-weight: 600;">PESO</div>
+                                    <div style="font-size: 16px; font-weight: 700; color: #6a1b9a;">${peso}kg</div>
+                                </div>
+                            ` : ''}
+                            
+                            ${valor > 0 ? `
+                                <div style="background: #fff3e0; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 10px; color: #f57c00; margin-bottom: 4px; font-weight: 600;">VALOR</div>
+                                    <div style="font-size: 16px; font-weight: 700; color: #e65100;">${valor}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Totais se quantidade > 1 -->
+                    ${(quantidade > 1 && (peso > 0 || valor > 0)) ? `
+                        <div style="background: #e8f5e8; padding: 12px; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <div style="font-size: 12px; color: #155724; margin-bottom: 4px; font-weight: 600;">TOTAL</div>
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #155724;">
+                                ${peso > 0 ? `<span><strong>Peso:</strong> ${(peso * quantidade).toFixed(1)}kg</span>` : ''}
+                                ${valor > 0 ? `<span><strong>Valor:</strong> ${valor * quantidade} moedas</span>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Atualizar preview quando campos mudarem
+        const campos = ['nome', 'categoria', 'descricao', 'quantidade', 'peso', 'valor'];
+        
+        campos.forEach(campo => {
+            const elemento = document.getElementById(campo);
+            if (elemento) {
+                elemento.addEventListener('input', function() {
+                    atualizarPreview();
+                    if (['quantidade', 'peso', 'valor'].includes(campo)) {
+                        calcularTotal();
+                    }
+                });
+                elemento.addEventListener('change', function() {
+                    atualizarPreview();
+                    if (['quantidade', 'peso', 'valor'].includes(campo)) {
+                        calcularTotal();
+                    }
+                });
+            }
+        });
+        
+        // Preview inicial
+        atualizarPreview();
+        
+        // Estilizar botões de sugestão
+        const style = document.createElement('style');
+        style.textContent = `
+            .btn-sugestao {
+                background: transparent;
+                border: 1px solid #dee2e6;
+                padding: 8px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.3s ease;
+                text-align: left;
+            }
+            .btn-sugestao:hover {
+                background: rgba(0,0,0,0.05);
+                border-color: #667eea;
+                transform: translateY(-1px);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Validação do formulário
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const nome = document.getElementById('nome').value.trim();
+            const descricao = document.getElementById('descricao').value.trim();
+            
+            if (!nome) {
+                e.preventDefault();
+                alert('Por favor, preencha o nome do item!');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            if (nome.length < 2) {
+                e.preventDefault();
+                alert('O nome do item deve ter pelo menos 2 caracteres!');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            if (!descricao) {
+                e.preventDefault();
+                alert('Por favor, preencha a descrição do item!');
+                document.getElementById('descricao').focus();
+                return;
+            }
+            
+            if (descricao.length < 10) {
+                e.preventDefault();
+                alert('A descrição deve ter pelo menos 10 caracteres!');
+                document.getElementById('descricao').focus();
+                return;
+            }
+            
+            // Confirmar criação
+            if (!confirm('Confirma a adição do item ao inventário?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Efeitos visuais nos inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#667eea';
+                this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '#e9ecef';
+                this.style.boxShadow = 'none';
+            });
+        });
+        
+        // Contador de caracteres para a descrição
+        const descricaoTextarea = document.getElementById('descricao');
+        const contador = document.createElement('div');
+        contador.style.cssText = 'font-size: 12px; color: #6c757d; text-align: right; margin-top: 5px;';
+        contador.textContent = `0 caracteres`;
+        descricaoTextarea.parentNode.appendChild(contador);
+        
+        descricaoTextarea.addEventListener('input', function() {
+            const length = this.value.length;
+            contador.textContent = `${length} caracteres`;
+            
+            if (length < 10) {
+                contador.style.color = '#dc3545';
+            } else if (length > 200) {
+                contador.style.color = '#ffc107';
+            } else {
+                contador.style.color = '#28a745';
+            }
+        });
+    });
+</script>
+{% endblock %}
